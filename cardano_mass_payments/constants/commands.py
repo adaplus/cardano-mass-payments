@@ -58,9 +58,26 @@ ongoing_str="{BashColor.BOLD_YELLOW.value}ONGOING{BashColor.NO_COLOR.value}"
 ttl_expired_str="{BashColor.BOLD_RED.value}TTL EXPIRED{BashColor.NO_COLOR.value}"
 """
 
+FIND_PYTHON_FUNCTION = """
+
+find_valid_python_version () {
+    python_str=$(echo $(which python3))
+    if ! [[ $python_str ]] ; then
+        python_str=$(echo $(which python))
+    fi
+    echo $python_str
+}
+
+python_exec_str=$(find_valid_python_version)
+if ! [[ $python_exec_str ]] ; then
+    echo "No python version found."
+    exit 1
+fi
+"""
+
 LATEST_SLOT_NUMBER_BASH_FUNCTION = """
 get_latest_slot_no () {{
-    {tip_query} | python -c "import sys, json; print(json.load(sys.stdin)['slot'])"
+    {tip_query} | {python_exec_str} -c "import sys, json; print(json.load(sys.stdin)['slot'])"
 }}
 """
 
@@ -76,7 +93,9 @@ UPDATE_TRANSACTION_PLAN_PYTHON_COMMANDS = ";".join(
     ],
 )
 
-UPDATE_TRANSACTION_PLAN_FILE = f'python -c "{UPDATE_TRANSACTION_PLAN_PYTHON_COMMANDS}"'
+UPDATE_TRANSACTION_PLAN_FILE = (
+    f'{{python_exec_str}} -c "{UPDATE_TRANSACTION_PLAN_PYTHON_COMMANDS}"'
+)
 
 DUST_TX_SUBMIT_SCRIPT = """
 echo "Submitting Dust Transactions to Cardano"

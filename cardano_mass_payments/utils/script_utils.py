@@ -17,6 +17,7 @@ from ..constants.commands import (
     DELETE_FILE,
     DUST_SUBMIT_FUNCTION_CALL,
     DUST_TX_SUBMIT_SCRIPT,
+    FIND_PYTHON_FUNCTION,
     GROUP_TX_ONGOING_FUNCTION_CALL,
     GROUP_TX_ONGOING_SET_FUNCTION_SCRIPT,
     LATEST_SLOT_NUMBER_BASH_FUNCTION,
@@ -934,6 +935,13 @@ def generate_bash_script(
 
     bash_script_list = ["#!/bin/bash"]
 
+    # Include python version checking function
+    if add_comments:
+        bash_script_list += add_bash_comment(
+            "# Find a possible python version for the script to use",
+        )
+    bash_script_list.append(FIND_PYTHON_FUNCTION)
+
     if not isinstance(transaction_plan, TransactionPlan):
         raise InvalidType(
             type=type(transaction_plan),
@@ -1416,6 +1424,7 @@ def generate_bash_script(
     bash_script_list.append(
         LATEST_SLOT_NUMBER_BASH_FUNCTION.format(
             tip_query=QUERY_TIP.format(prefix=prefix, network=network_flag),
+            python_exec_str="$python_exec_str",
         ),
     )
 
@@ -1456,17 +1465,20 @@ def generate_bash_script(
                         python_update_command=f"data['dust_group_details']['$2'][$4]['submission_status']="
                         f"'{TransactionStatus.SUBMISSION_ONGOING.value}';"
                         f"data['dust_group_details']['$2'][$4]['tx_hash_id']='$3'",
+                        python_exec_str="$python_exec_str",
                     ),
                     expired_status_command=UPDATE_TRANSACTION_PLAN_FILE.format(
                         transaction_plan_filename=transaction_plan.filename,
                         python_update_command=f"data['dust_group_details']['$2'][$4]['submission_status']="
                         f"'{TransactionStatus.TTL_EXPIRED.value}'",
+                        python_exec_str="$python_exec_str",
                     ),
                     success_status_command=UPDATE_TRANSACTION_PLAN_FILE.format(
                         transaction_plan_filename=transaction_plan.filename,
                         python_update_command=f"data['dust_group_details']['$2'][$4]['submission_status']="
                         f"'{TransactionStatus.SUBMISSION_DONE.value}';"
                         f"data['dust_group_details']['$2'][$4]['tx_hash_id']='$3'",
+                        python_exec_str="$python_exec_str",
                     ),
                     ttl=ttl,
                 ),
@@ -1521,17 +1533,20 @@ def generate_bash_script(
                     python_update_command=f"data['prep_detail']['submission_status']="
                     f"'{TransactionStatus.SUBMISSION_ONGOING.value}';"
                     f"data['prep_detail']['tx_hash_id']='$prep_txid'",
+                    python_exec_str="$python_exec_str",
                 ),
                 expired_status_command=UPDATE_TRANSACTION_PLAN_FILE.format(
                     transaction_plan_filename=transaction_plan.filename,
                     python_update_command=f"data['prep_detail']['submission_status']="
                     f"'{TransactionStatus.TTL_EXPIRED.value}'",
+                    python_exec_str="$python_exec_str",
                 ),
                 success_status_command=UPDATE_TRANSACTION_PLAN_FILE.format(
                     transaction_plan_filename=transaction_plan.filename,
                     python_update_command=f"data['prep_detail']['submission_status']="
                     f"'{TransactionStatus.SUBMISSION_DONE.value}';"
                     f"data['prep_detail']['tx_hash_id']='$prep_txid'",
+                    python_exec_str="$python_exec_str",
                 ),
             ),
         )
@@ -1557,6 +1572,7 @@ def generate_bash_script(
                     python_update_command=f"data['group_details'][$1]['submission_status']="
                     f"'{TransactionStatus.SUBMISSION_ONGOING.value}';"
                     f"data['group_details'][$1]['tx_hash_id']='$2'",
+                    python_exec_str="$python_exec_str",
                 ),
             ),
         )
@@ -1587,12 +1603,14 @@ def generate_bash_script(
                     transaction_plan_filename=transaction_plan.filename,
                     python_update_command=f"data['group_details'][$group_index]['submission_status']="
                     f"'{TransactionStatus.TTL_EXPIRED.value}'",
+                    python_exec_str="$python_exec_str",
                 ),
                 success_status_command=UPDATE_TRANSACTION_PLAN_FILE.format(
                     transaction_plan_filename=transaction_plan.filename,
                     python_update_command=f"data['group_details'][$group_index]['submission_status']="
                     f"'{TransactionStatus.SUBMISSION_DONE.value}';"
                     f"data['group_details'][$group_index]['tx_hash_id']='$group_txid'",
+                    python_exec_str="$python_exec_str",
                 ),
             ),
         )
