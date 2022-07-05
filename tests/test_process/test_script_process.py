@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import stat
 import tempfile
@@ -7,7 +8,11 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from cardano_mass_payments.classes import TransactionPlan
-from cardano_mass_payments.commands.mass_payments import generate_script_process
+from cardano_mass_payments.commands.mass_payments import (
+    adjust_metadata_message,
+    dust_collect,
+    generate_script_process,
+)
 from cardano_mass_payments.constants.common import (
     CardanoNetwork,
     DustCollectionMethod,
@@ -19,9 +24,12 @@ from cardano_mass_payments.constants.exceptions import (
     InvalidFileError,
     ScriptError,
 )
-from tests.mock_responses import MOCK_TEST_RESPONSES
+from tests.mock_responses import MOCK_TEST_RESPONSES, USE_SUBPROCESS_FUNCTION_FLAG
 from tests.mock_utils import (
     MOCK_ADDRESS,
+    MOCK_METADATA_CONTENT,
+    MOCK_PROTOCOL_PARAMETERS,
+    MOCK_STAKE_ADDRESS,
     assert_not_called_with,
     create_test_payment_csv,
     generate_mock_popen_function,
@@ -55,6 +63,8 @@ class TestProcess(TestCase):
         metadata_json_file=None,
         metadata_message_file=None,
         transaction_plan_file=None,
+        magic_number=1,
+        include_rewards=False,
     ):
         command_arguments = argparse.Namespace()
 
@@ -74,6 +84,8 @@ class TestProcess(TestCase):
         command_arguments.metadata_json_file = metadata_json_file
         command_arguments.metadata_message_file = metadata_message_file
         command_arguments.transaction_plan_file = transaction_plan_file
+        command_arguments.magic_number = magic_number
+        command_arguments.include_rewards = include_rewards
 
         return command_arguments
 
@@ -88,6 +100,9 @@ class TestProcess(TestCase):
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -122,6 +137,11 @@ class TestProcess(TestCase):
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -156,6 +176,11 @@ class TestProcess(TestCase):
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -199,6 +224,11 @@ class TestProcess(TestCase):
                 f"/tmp/utxo-{MOCK_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -242,6 +272,11 @@ class TestProcess(TestCase):
                 f"/tmp/utxo-{MOCK_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -285,6 +320,11 @@ class TestProcess(TestCase):
                 f"/tmp/utxo-{MOCK_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -328,6 +368,11 @@ class TestProcess(TestCase):
                 f"/tmp/utxo-{MOCK_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -356,6 +401,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -391,6 +437,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -431,6 +478,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -472,6 +520,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -479,13 +528,18 @@ class TestProcess(TestCase):
             },
         }
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
             payments_csv=payment_file.name,
         )
 
-        with patch(
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ), patch(
@@ -527,6 +581,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -564,6 +619,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -601,6 +657,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_wallet_utxos = {}
         for i in range(500):
             mock_wallet_utxos[
@@ -642,6 +699,7 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
@@ -679,12 +737,17 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -716,17 +779,72 @@ class TestProcess(TestCase):
 
         assert isinstance(transaction_plan, Exception)
 
-    def test_immediate_execution_yes_response(self):
+    def test_success_with_rewards(self):
         payment_file = create_test_payment_csv(30)
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
+        mock_responses[("cardano-address", "address")] = {
+            "stake_key_hash": "test_stake_key_hash",
+        }
+        mock_responses['"bech32'] = MOCK_STAKE_ADDRESS
+        mock_responses[("query", "stake-address-info")] = [
+            {
+                "rewardAccountBalance": 1000000,
+            },
+        ]
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            include_rewards=True,
+        )
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_immediate_execution_yes_response(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
         mock_responses["bash"] = "DONE"
 
         command_arguments = self.generate_command_arguments(
@@ -770,12 +888,17 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
         mock_responses["bash"] = "DONE"
 
         command_arguments = self.generate_command_arguments(
@@ -818,12 +941,17 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
         mock_responses["bash"] = "DONE"
 
         command_arguments = self.generate_command_arguments(
@@ -858,6 +986,549 @@ class TestProcess(TestCase):
             mock_input.assert_called_with(
                 "Please select from the following options [YES/No] : ",
             )
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_metadata_template_inclusion(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        metadata_template_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".json")
+        metadata_template_file.write(json.dumps(MOCK_METADATA_CONTENT))
+        metadata_template_file.seek(0)
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+        mock_responses["sk"] = USE_SUBPROCESS_FUNCTION_FLAG
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            metadata_json_file=metadata_template_file.name,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+        assert transaction_plan.metadata == MOCK_METADATA_CONTENT
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+        metadata_template_file.close()
+
+    def test_metadata_message_inclusion(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        metadata_message_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".txt")
+        metadata_message = "test_message " * 20
+        metadata_message_file.write(metadata_message.strip())
+        metadata_message_file.seek(0)
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses["sk"] = USE_SUBPROCESS_FUNCTION_FLAG
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            metadata_message_file=metadata_message_file.name,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+        assert transaction_plan.metadata != MOCK_METADATA_CONTENT
+        assert transaction_plan.metadata == {
+            "674": {
+                "msg": adjust_metadata_message(metadata_message.strip().split("\n")),
+            },
+        }
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+        metadata_message_file.close()
+
+    def test_metadata_message_and_template_inclusion(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        metadata_template_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".json")
+        metadata_content = deepcopy(MOCK_METADATA_CONTENT)
+        metadata_template_file.write(json.dumps(metadata_content))
+        metadata_template_file.seek(0)
+
+        metadata_message_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".txt")
+        metadata_message = "test_message " * 20
+        metadata_message_file.write(metadata_message.strip())
+        metadata_message_file.seek(0)
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+        mock_responses["sk"] = USE_SUBPROCESS_FUNCTION_FLAG
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            metadata_json_file=metadata_template_file.name,
+            metadata_message_file=metadata_message_file.name,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+        assert transaction_plan.metadata != MOCK_METADATA_CONTENT
+        metadata_content.update(
+            {
+                "674": {
+                    "msg": adjust_metadata_message(
+                        metadata_message.strip().split("\n"),
+                    ),
+                },
+            },
+        )
+        assert transaction_plan.metadata == metadata_content
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+        metadata_message_file.close()
+        metadata_template_file.close()
+
+    def test_output_format_bash_script(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            output_type=ScriptOutputFormats.BASH_SCRIPT.value,
+        )
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.print_to_console",
+        ) as print_function:
+            transaction_plan = generate_script_process(command_arguments)
+
+            print_function.assert_any_call(
+                f"Script Generated, stored in {transaction_plan.uuid}.sh",
+                ScriptOutputFormats.BASH_SCRIPT,
+            )
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_output_format_console(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            output_type=ScriptOutputFormats.CONSOLE.value,
+        )
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.print_to_console",
+        ) as print_function:
+            transaction_plan = generate_script_process(command_arguments)
+
+            print_function.assert_any_call(
+                "Generated Script:",
+                ScriptOutputFormats.CONSOLE,
+            )
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        source_file.close()
+        payment_file.close()
+
+    def test_output_format_json(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            output_type=ScriptOutputFormats.JSON.value,
+        )
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.print_to_console",
+        ) as print_function:
+            transaction_plan = generate_script_process(command_arguments)
+
+            print_function.assert_any_call(
+                json.dumps(
+                    {
+                        "script_file": f"{transaction_plan.uuid}.sh",
+                    },
+                ),
+                ScriptOutputFormats.JSON,
+            )
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_output_format_transaction_plan(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            output_type=ScriptOutputFormats.TRANSACTION_PLAN.value,
+        )
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.print_to_console",
+        ) as print_function:
+            transaction_plan = generate_script_process(command_arguments)
+
+            print_function.assert_any_call(
+                json.dumps(
+                    {
+                        "transaction_plan_file": transaction_plan.filename,
+                    },
+                ),
+                ScriptOutputFormats.TRANSACTION_PLAN,
+            )
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        source_file.close()
+        payment_file.close()
+
+    def test_dust_collection_enabled_and_not_required(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            enable_dust_collection=True,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_dust_collection_enabled_and_required(self):
+        payment_file = create_test_payment_csv(1000)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_input_details = {}
+        for i in range(100):
+            mock_input_details[
+                f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
+            ] = {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 2000000},
+            }
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = mock_input_details
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            enable_dust_collection=True,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.dust_collect",
+            side_effect=dust_collect,
+        ) as mock_dust_collect:
+            transaction_plan = generate_script_process(command_arguments)
+            mock_dust_collect.assert_called()
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_dust_collection_disabled_and_required(self):
+        payment_file = create_test_payment_csv(1000)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_input_details = {}
+        for i in range(100):
+            mock_input_details[
+                f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
+            ] = {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 2000000},
+            }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = mock_input_details
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            enable_dust_collection=False,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ), patch(
+            "cardano_mass_payments.commands.mass_payments.dust_collect",
+            side_effect=dust_collect,
+        ) as mock_dust_collect:
+            try:
+                transaction_plan = generate_script_process(command_arguments)
+            except Exception as e:
+                transaction_plan = e
+            mock_dust_collect.assert_not_called()
+
+        assert isinstance(transaction_plan, ScriptError)
+
+        source_file.close()
+        payment_file.close()
+
+    def test_dust_collection_disabled_and_not_required(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            enable_dust_collection=False,
+        )
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            transaction_plan = generate_script_process(command_arguments)
 
         assert isinstance(transaction_plan, TransactionPlan)
         assert os.path.exists(transaction_plan.filename)

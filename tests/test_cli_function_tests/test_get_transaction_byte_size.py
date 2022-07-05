@@ -17,6 +17,7 @@ from tests.mock_responses import MOCK_TEST_RESPONSES
 from tests.mock_utils import (
     INVALID_STRING_TYPE,
     MOCK_ADDRESS,
+    MOCK_PROTOCOL_PARAMETERS,
     generate_mock_popen_function,
     mock_raise_internal_error,
 )
@@ -166,6 +167,26 @@ class TestProcess(TestCase):
         assert result.message == "Invalid signing key file list argument type."
         assert result.additional_context["type"] == INVALID_STRING_TYPE
 
+    def test_invalid_reward_details(self):
+        try:
+            result = get_transaction_byte_size(
+                input_arg=1,
+                output_arg=[
+                    PaymentDetail(address="test_address", amount=1000),
+                    PaymentDetail(address="test_address", amount=1000),
+                    PaymentDetail(address="test_address", amount=1000),
+                    PaymentDetail(address="test_address", amount=1000),
+                    PaymentDetail(address="test_address", amount=1000),
+                ],
+                reward_details="invalid",
+            )
+        except Exception as e:
+            result = e
+
+        assert isinstance(result, InvalidType)
+        assert result.message == "Invalid reward details type."
+        assert result.additional_context["type"] == INVALID_STRING_TYPE
+
     def test_unexpected_error_during_command_execution(self):
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -242,6 +263,7 @@ class TestProcess(TestCase):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -271,6 +293,9 @@ class TestProcess(TestCase):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses["rm"] = {}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -302,11 +327,13 @@ class TestProcess(TestCase):
         mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses["sign"] = {}
         mock_responses["rm"] = {}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
-                "source_signing_key_file": "test.skey",
+                "source_signing_key_file": ["test.skey"],
             },
         ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -337,11 +364,13 @@ class TestProcess(TestCase):
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
         mock_responses["sign"] = {}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
-                "source_signing_key_file": "test.skey",
+                "source_signing_key_file": ["test.skey"],
             },
         ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -375,11 +404,13 @@ class TestProcess(TestCase):
         mock_responses["sign"] = {}
         mock_responses["rm"] = {}
         mock_responses["cat"] = {"cborHex": cbor_hex_string}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
-                "source_signing_key_file": "test.skey",
+                "source_signing_key_file": ["test.skey"],
             },
         ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -405,10 +436,14 @@ class TestProcess(TestCase):
     def test_success_pycardano_method_int_input_int_output(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
         mock_responses["rm"] = {}
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.pycardano_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ), patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
@@ -435,10 +470,14 @@ class TestProcess(TestCase):
     def test_success_pycardano_method_int_input_list_output(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
         mock_responses["rm"] = {}
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.pycardano_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ), patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
@@ -471,10 +510,14 @@ class TestProcess(TestCase):
     def test_success_pycardano_method_list_input_int_output(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
         mock_responses["rm"] = {}
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.pycardano_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ), patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
@@ -514,10 +557,14 @@ class TestProcess(TestCase):
     def test_success_pycardano_method_list_input_list_output(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
         mock_responses["rm"] = {}
 
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.pycardano_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ), patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
@@ -559,3 +606,44 @@ class TestProcess(TestCase):
 
         assert isinstance(result, int)
         assert result > 0
+
+    def test_success_with_reward_details(self):
+        cbor_hex_string = "test_cborhex".encode("utf-8").hex()
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["build-raw"] = {}
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses["sign"] = {}
+        mock_responses["rm"] = {}
+        mock_responses["cat"] = {"cborHex": cbor_hex_string}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {
+                "source_signing_key_file": ["test.skey"],
+            },
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ):
+            try:
+                result = get_transaction_byte_size(
+                    input_arg=1,
+                    output_arg=[
+                        PaymentDetail(address="test_address", amount=1000),
+                        PaymentDetail(address="test_address", amount=1000),
+                        PaymentDetail(address="test_address", amount=1000),
+                        PaymentDetail(address="test_address", amount=1000),
+                        PaymentDetail(address="test_address", amount=1000),
+                    ],
+                    reward_details={
+                        "stake_address": "test_stake_address",
+                        "stake_amount": 1000,
+                    },
+                )
+            except Exception as e:
+                result = e
+
+        assert isinstance(result, int)
+        assert result == len(bytearray.fromhex(cbor_hex_string))

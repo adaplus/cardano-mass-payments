@@ -19,4 +19,7 @@ MOCK_TEST_RESPONSES = {
     ("query", "tip"): USE_SUBPROCESS_FUNCTION_FLAG,
     "cat": USE_SUBPROCESS_FUNCTION_FLAG,
     "rm": USE_SUBPROCESS_FUNCTION_FLAG,
+    ("cardano-address", "address"): USE_SUBPROCESS_FUNCTION_FLAG,
+    '"bech32': USE_SUBPROCESS_FUNCTION_FLAG,
+    ("query", "stake-address-info"): USE_SUBPROCESS_FUNCTION_FLAG,
 }

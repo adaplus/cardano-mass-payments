@@ -226,3 +226,18 @@ do
 done
 echo "Group Transaction Submission Checking Done"
 """
+
+INSPECT_ADDRESS_COMMAND = "echo '{full_address}' | cardano-address address inspect"
+
+INSPECT_ADDRESS_DOCKER_COMMAND = f'{{prefix}}sh -c "{INSPECT_ADDRESS_COMMAND}"'
+
+
+STAKE_ADDRESS_CONVERT_COMMAND = "bech32 {stake_prefix} <<< {stake_hash}"
+
+STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND = (
+    f'{{prefix}}sh -c "{STAKE_ADDRESS_CONVERT_COMMAND}"'
+)
+
+STAKE_REWARDS_COMMAND = (
+    "{prefix}cardano-cli query stake-address-info --address {address} {network}"
+)

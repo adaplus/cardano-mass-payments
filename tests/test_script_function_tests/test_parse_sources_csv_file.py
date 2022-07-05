@@ -67,7 +67,7 @@ class TestProcess(TestCase):
         except Exception as e:
             result = e
 
-        assert isinstance(result, IndexError)
+        assert isinstance(result, EmptyList)
 
     def test_success(self):
         sources_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".csv")
@@ -80,4 +80,17 @@ class TestProcess(TestCase):
             result = e
 
         assert isinstance(result, dict)
-        assert result["column_1"] == "column_2"
+        assert result["column_1"] == ["column_2"]
+
+    def test_success_multiple_signing_keys(self):
+        sources_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".csv")
+        sources_file.write("column_1, column_2, column_3")
+        sources_file.seek(0)
+
+        try:
+            result = parse_sources_csv_file(sources_file.name)
+        except Exception as e:
+            result = e
+
+        assert isinstance(result, dict)
+        assert result["column_1"] == ["column_2", "column_3"]

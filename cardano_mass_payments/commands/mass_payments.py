@@ -3,6 +3,7 @@ import copy
 import json
 import os
 import traceback
+import uuid
 
 from ..cache import CACHE_VALUES
 from ..classes import SourceAddressDetail, TransactionPlan
@@ -117,7 +118,10 @@ def get_source_details(args, transaction_plan):
         )
 
     if signing_key_file:
-        source_details[source_address] = signing_key_file
+        if isinstance(signing_key_file, list):
+            source_details[source_address] = signing_key_file
+        else:
+            source_details[source_address] = [signing_key_file]
     elif source_details.get(source_address):
         signing_key_file = source_details.get(source_address)
         print_to_console(
@@ -172,6 +176,14 @@ def get_metadata_details(args, transaction_plan, metadata_json_filename):
             {"674": {"msg": adjust_metadata_message(metadata_message)}},
         )
         # Create a new metadata file
+        if metadata_json_filename is None:
+            metadata_message_file_str_split = os.path.split(metadata_message_filename)
+            metadata_message_dir = metadata_message_file_str_split[0]
+            metadata_json_filename = f"{uuid.uuid4().hex}_metadata.json"
+            if metadata_message_dir != "":
+                metadata_json_filename = (
+                    f"{metadata_message_dir}/{metadata_json_filename}"
+                )
         metadata_json_file_str_split = os.path.split(metadata_json_filename)
         metadata_json_dir = metadata_json_file_str_split[0]
         metadata_json_filename = f"new_{metadata_json_file_str_split[1]}"
@@ -212,6 +224,10 @@ def get_command_parameters(args):
     output_format = ScriptOutputFormats(args.output_type)
     CACHE_VALUES["output_format"] = output_format
     metadata_json_filename = args.metadata_json_file
+
+    # Update Settings
+    if args.magic_number:
+        CACHE_VALUES["settings"].cardano_testnet_magic = args.magic_number
 
     transaction_plan = None
     if args.transaction_plan_file:
@@ -256,6 +272,12 @@ def get_command_parameters(args):
         raise InvalidMethod(method=args.script_method)
 
     if script_method == ScriptMethod.METHOD_PYCARDANO:
+        if args.include_rewards:
+            # Rewards withdrawal is not supported for Pycardano Method
+            raise ScriptError(
+                message="Rewards withdrawal is not supported for Pycardano Method",
+            )
+
         # Create pycardano context object
         CACHE_VALUES["pycardano_context"] = CardanoCLIChainContext(
             cardano_network=cardano_network,
@@ -330,6 +352,7 @@ def get_command_parameters(args):
         "dust_collection_threshold": dust_collection_threshold,
         "enable_dust_collection": args.enable_dust_collection,
         "enable_immediate_execution": args.execute_script_now,
+        "include_rewards": args.include_rewards,
     }
 
 
@@ -344,6 +367,7 @@ def generate_transaction_plan(
     enable_dust_collection=False,
     dust_collection_method=DustCollectionMethod.COLLECT_TO_SOURCE,
     dust_collection_threshold=10000000,
+    include_rewards=False,
 ):
     """
     Generate Transaction Plan
@@ -358,6 +382,7 @@ def generate_transaction_plan(
     :param enable_dust_collection: Flag on whether to execute dust collection or not
     :param dust_collection_method: Method that will be used for dust collection
     :param dust_collection_threshold: Maximum amount that will be the basis for dust collection
+    :param include_rewards: Flag on whether to include getting the stake rewards
     :return: TransactionPlan object
     """
     print_to_console("Creating Preparation TX and Initial Groupings...", output_format)
@@ -367,6 +392,7 @@ def generate_transaction_plan(
         payments_csv_file,
         network=cardano_network,
         method=script_method,
+        include_rewards=include_rewards,
     )
 
     if init_details.get("require_dust_collection"):
@@ -382,6 +408,7 @@ def generate_transaction_plan(
                 method=script_method,
                 dust_collection_method=dust_collection_method,
                 dust_collection_threshold=dust_collection_threshold,
+                reward_details=init_details.get("stake_reward_details", {}),
             )
         else:
             raise ScriptError(
@@ -397,6 +424,7 @@ def generate_transaction_plan(
         init_details.get("transaction_filename"),
         source_address,
         init_details.get("max_tx_size"),
+        reward_details=init_details.get("stake_reward_details", {}),
         allow_ttl_slots=allowed_ttl_slots,
         network=cardano_network,
         method=script_method,
@@ -448,6 +476,7 @@ def generate_script_process(args):
                 "dust_collection_threshold",
             ),
             enable_dust_collection=command_parameters.get("enable_dust_collection"),
+            include_rewards=command_parameters.get("include_rewards"),
         )
         if command_parameters.get("transaction_plan_file") is None
         else command_parameters.get("transaction_plan_file")
@@ -466,9 +495,9 @@ def generate_script_process(args):
     if output_format == ScriptOutputFormats.TRANSACTION_PLAN:
         print_to_console(
             json.dumps({"transaction_plan_file": transaction_plan_filename}),
-            output_format=output_format,
+            output_format,
         )
-        return
+        return transaction_plan
 
     # Generating Bash Script
     print_to_console("Generating the final Bash Script...", output_format)
@@ -602,8 +631,21 @@ def main():
         const=True,
     )
     parser.add_argument(
+        "--include-rewards",
+        help="Include Main Source Address Stake Rewards",
+        nargs="?",
+        default=False,
+        const=True,
+    )
+    parser.add_argument(
         "--allowed-ttl-slots",
         help="Number of allowable slots for the Transaction TTL",
+        type=int,
+        default=1000,
+    )
+    parser.add_argument(
+        "--magic-number",
+        help="Cardano Network Magic Number",
         type=int,
         default=1000,
     )

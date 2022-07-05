@@ -35,10 +35,16 @@ The package can only be run on `python >= 3.7`.
 
 These are the minimum required versions of the required tools:
 
-*   `pycardano >= 0.3.1`
+*   `pycardano >= 0.4.1`
 
-Currently, all Script methods require a connection to either Docker Cardano Node or Host Cardano Node in your local machine. Supported version should at least be `1.33.0`
+Currently, all Script methods requires the following cardano tools:
+- Cardano Node: `>=1.33.0`
+- Cardano Address: `>=3.7.0`
+- Bech32: `>=1.1.2`
 
+For Docker Cardano Versions, Cardano Wallet Docker Image has both Cardano Address and Bech32 tools in it
+
+Supported Version: `>= v2022-01-18`
 
 
 ### Installation
@@ -81,7 +87,7 @@ pip install cardano-mass-payments
 | `--cardano-network`           | Dictates which Cardano network the package will connect to.<br>Possible values:<br>\- `MAINNET`<br>\- `TESTNET`                                                                                                                                                                                                                                                                                   |
 | `--script-method`             | Dictates which method to use for handling the internal logic (getting protocol parameters, getting user utxos).<br>Possible values:<br>\- `HOST_CLI` - connects package to the Cardano CLI installed in the machine<br>\- `DOCKER_CLI` - connects package to the Cardano CLI Docker Image<br>\- `PYCARDANO` - uses Pycardano in the package                                                       |
 | `--output-type`               | Dictates the type of the generated output.<br>Possible values:<br>\- `BASH_SCRIPT` - Creates a bash file and displays the file name in the console<br>\- `CONSOLE` - Displays the script contents in console<br>\- `JSON` - Display a JSON object in console containing the script file name<br>\- `TRANSACTION_PLAN` - Only create the transaction plan and display the file name in the console |
-| `--sources-csv`               | CSV File containing the source address details<br>Format per line:<br>`<source_address>,<signing_key_file_of_address>`                                                                                                                                                                                                                                                                            |
+| `--sources-csv`               | CSV File containing the source address details<br>Format per line:<br>`<source_address>,<signing_key_file_of_address_1>,<signing_key_file_of_address_2>,...,<signing_key_file_of_address_n>`                                                                                                                                                                                                      |
 | `--payments-csv`              | CSV File containing the payment details that will be sent to Cardano.<br>Format per line:<br>`<destination_address>,<amount_in_lovelace>`                                                                                                                                                                                                                                                         |
 | `--allowed-ttl-slots`         | Number of slots allowed before the transaction to be deemed invalid.<br>Default: `1000`                                                                                                                                                                                                                                                                                                           |
 | `--dust-collection-method`    | Method used for dust collection.<br>Possible values:<br>\- `COLLECT_TO_SOURCE` - dust will all be collected and sent to the primary source address<br>\- `COLLECT_PER_ADDRESS` - dust will be collected and sent per address                                                                                                                                                                      |
@@ -91,6 +97,7 @@ pip install cardano-mass-payments
 | `--metadata-json-file`        | JSON File containing the metadata template that will be included in the cardano transaction.                                                                                                                                                                                                                                                                                                      |
 | `--metadata-message-file`     | TXT File containing the message that will be added in the transaction metadata.                                                                                                                                                                                                                                                                                                                   |
 | `--transaction-plan-file`     | TXT Transaction Plan File which can be used to generate the script.                                                                                                                                                                                                                                                                                                                               |
+| `"--magic-number`             | Cardano Network Magic Number where the python script will connect to.                                                                                                                                                                                                                                                                                                                             |
 
 
 
@@ -104,6 +111,7 @@ pip install cardano-mass-payments
 | `--use-docker-cli-for-pycardano` | By default, Pycardano connects to Cardano CLI. This flag is used if the connected cli is the host one or the docker one |
 | `--enable-dust-collection`       | Enable Dust Collection (Additional Step of combining small utxos into 1 utxo)                                           |
 | `--execute-script-now`           | Execute the script right after it's generated                                                                           |
+| `--include-rewards`              | Withdraw rewards of source address and include it in the transaction                                                    |
 
 
 

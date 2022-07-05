@@ -5,8 +5,9 @@ import tempfile
 import traceback
 import uuid
 
+from pycardano import Address
+from pycardano import Network as PycardanoNetwork
 from pycardano import (
-    Address,
     PaymentSigningKey,
     Transaction,
     TransactionBody,
@@ -26,11 +27,16 @@ from ..constants.commands import (
     CHECK_TEMP_DIRECTORY,
     CREATE_FILE_COPY_TO_DOCKER,
     DELETE_FILE,
+    INSPECT_ADDRESS_COMMAND,
+    INSPECT_ADDRESS_DOCKER_COMMAND,
     QUERY_PROTOCOL_PARAMETERS,
     QUERY_PROTOCOL_PARAMETERS_WITH_FILE,
     QUERY_TIP,
     QUERY_WALLET_UTXO,
     READ_FILE,
+    STAKE_ADDRESS_CONVERT_COMMAND,
+    STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND,
+    STAKE_REWARDS_COMMAND,
     TRANSACTION_BUILD,
     TRANSACTION_FEE,
     TRANSACTION_SIGN,
@@ -274,6 +280,7 @@ def create_transaction_command(
     ttl=None,
     metadata_filename=None,
     is_draft=True,
+    reward_details={},
 ):
     """
     Creates the build cardano transaction command
@@ -286,6 +293,7 @@ def create_transaction_command(
     :param ttl: Transaction TTL (Optional)
     :param metadata_filename: Name of the Metadata JSON File (Optional)
     :param is_draft: Flag to determine whether the file being created is a draft or not (Optional)
+    :param reward_details: Map containing reward details (Optional)
 
     :return: Build Transaction Command String
     """
@@ -363,6 +371,16 @@ def create_transaction_command(
 
     # Extra details
     extra_details = ""
+    if isinstance(reward_details, dict) and reward_details != {}:
+        if is_draft:
+            extra_details += f"--withdrawal {reward_details.get('stake_address')}+0 "
+        else:
+            extra_details += f"--withdrawal {reward_details.get('stake_address')}+{reward_details.get('stake_amount')} "
+    elif not isinstance(reward_details, dict):
+        raise ScriptError(
+            message="Invalid reward details type.",
+            additional_context={"type": type(reward_details)},
+        )
     if is_draft:
         extra_details += "--fee 0 --invalid-hereafter 0 "
     else:
@@ -390,6 +408,7 @@ def create_transaction_file(
     is_draft=True,
     fee=None,
     ttl=None,
+    reward_details={},
 ):
     """
     Creates a transaction draft file
@@ -400,6 +419,7 @@ def create_transaction_file(
     :param is_draft: Flag to determine whether the file being created is a draft or not
     :param fee: Transaction Fee (Optional)
     :param ttl: Transaction TTL (Optional)
+    :param reward_details: Map containing reward details (Optional)
     :return: Transaction Draft File Name (CLI Methods), Transaction Object Details (Pycardano Method)
     """
     masspayments_settings = get_script_settings()
@@ -420,6 +440,7 @@ def create_transaction_file(
                 ttl=ttl,
                 metadata_filename=CACHE_VALUES.get("metadata_file"),
                 is_draft=is_draft,
+                reward_details=reward_details,
             )
         except ScriptError as e:
             raise e
@@ -730,6 +751,7 @@ def sign_tx_file(
 def get_transaction_byte_size(
     input_arg,
     output_arg,
+    reward_details={},
     method=ScriptMethod.METHOD_DOCKER_CLI,
     network=CardanoNetwork.TESTNET,
     signing_key_files=None,
@@ -738,6 +760,7 @@ def get_transaction_byte_size(
     Gets the transaction byte size, given the number of input and output utxo
     :param input_arg: Number of Input UTxO or List of Input UTxO details (hash, index, amount)
     :param output_arg: Number of Output UTxO or List of Output UTxO details (address, amount)
+    :param reward_details: Map containing reward details
     :param method: Method that will be used for creating transaction draft
     :param network: Network where the function will get the minimum transaction fee
     :param signing_key_files: List of Signing Key Files that will be used for signing
@@ -773,6 +796,11 @@ def get_transaction_byte_size(
             type=type(signing_key_files),
             message="Invalid signing key file list argument type.",
         )
+    if not isinstance(reward_details, dict):
+        raise InvalidType(
+            type=type(reward_details),
+            message="Invalid reward details type.",
+        )
 
     if method in [ScriptMethod.METHOD_DOCKER_CLI, ScriptMethod.METHOD_HOST_CLI]:
         # Create Draft File
@@ -781,6 +809,7 @@ def get_transaction_byte_size(
                 input_arg=input_arg,
                 output_arg=output_arg,
                 method=method,
+                reward_details=reward_details,
             )
         except ScriptError as e:
             raise e
@@ -830,6 +859,7 @@ def get_transaction_byte_size(
                 ttl=slot_number,
                 method=method,
                 is_draft=False,
+                reward_details=reward_details,
             )
         except ScriptError as e:
             raise e
@@ -843,7 +873,7 @@ def get_transaction_byte_size(
         # Create Signed File
         try:
             if not signing_key_files:
-                signing_key_files = [CACHE_VALUES.get("source_signing_key_file")]
+                signing_key_files = CACHE_VALUES.get("source_signing_key_file")
             signed_file = sign_tx_file(
                 tx_file=raw_file,
                 network=network,
@@ -1372,5 +1402,182 @@ def get_utxo_hash(
         utxo_hash = utxo_hash_results.decode("utf-8").strip()
 
         return utxo_hash
+
+    raise InvalidMethod(method=method)
+
+
+def get_staking_address(
+    full_address,
+    network=CardanoNetwork.TESTNET,
+    method=ScriptMethod.METHOD_DOCKER_CLI,
+):
+    """
+    Get the staking address from the full address
+    :param full_address: Full Address String
+    :param network: Network where the function will get the staking address
+    :param method: Method that will be used for getting the staking address
+    :return: Staking Address String
+    """
+
+    masspayments_settings = get_script_settings()
+
+    if not isinstance(full_address, str):
+        raise InvalidType(message="Invalid Full Address Type.", type=type(full_address))
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+        raise InvalidNetwork(network=network)
+
+    if method in [
+        ScriptMethod.METHOD_DOCKER_CLI,
+        ScriptMethod.METHOD_HOST_CLI,
+    ]:
+        prefix = masspayments_settings.wallet_command_prefix(method)
+        if method == ScriptMethod.METHOD_PYCARDANO:
+            pycardano_context = CACHE_VALUES.get("pycardano_context")
+            prefix = pycardano_context.wallet_command_prefix
+
+        inspect_address_command = (
+            INSPECT_ADDRESS_DOCKER_COMMAND.format(
+                prefix=prefix,
+                full_address=full_address,
+            )
+            if prefix != ""
+            else INSPECT_ADDRESS_COMMAND.format(
+                full_address=full_address,
+            )
+        )
+        try:
+            inspect_address_results = (
+                subprocess_popen(
+                    inspect_address_command,
+                    stdout=subprocess.PIPE,
+                    shell=True,
+                )
+                .stdout.read()
+                .decode("utf-8")
+            )
+            full_address_details = json.loads(inspect_address_results)
+            staking_key_hash = full_address_details.get("stake_key_hash")
+        except Exception as e:
+            raise ScriptError(
+                message="Error during Address Inspection via Cardano CLI.",
+                error=e,
+                traceback=traceback.format_exc(),
+                additional_context={"full_address": full_address},
+            )
+
+        # Stake Hash Additional Bytes
+        # Stated in https://cardano.stackexchange.com/questions/7055/staking-address-bech32
+        staking_key_hash = (
+            f"e1{staking_key_hash}"
+            if network == CardanoNetwork.MAINNET
+            else f"e0{staking_key_hash}"
+        )
+        staking_address_command = (
+            STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND.format(
+                prefix=prefix,
+                stake_prefix="stake_"
+                if network == CardanoNetwork.MAINNET
+                else "stake_test",
+                stake_hash=staking_key_hash,
+            )
+            if prefix != ""
+            else STAKE_ADDRESS_CONVERT_COMMAND.format(
+                stake_prefix="stake_"
+                if network == CardanoNetwork.MAINNET
+                else "stake_test",
+                stake_hash=staking_key_hash,
+            )
+        )
+        try:
+            staking_address = (
+                subprocess_popen(
+                    staking_address_command,
+                    stdout=subprocess.PIPE,
+                    shell=True,
+                )
+                .stdout.read()
+                .decode("utf-8")
+                .strip()
+            )
+        except Exception as e:
+            raise ScriptError(
+                message="Error during Stake Address Fetch.",
+                error=e,
+                traceback=traceback.format_exc(),
+                additional_context={"full_address": full_address},
+            )
+
+        return staking_address
+    elif method == ScriptMethod.METHOD_PYCARDANO:
+        full_address_obj = Address.from_primitive(full_address)
+        stake_address_obj = Address(
+            staking_part=full_address_obj.staking_part,
+            network=PycardanoNetwork.TESTNET
+            if network == CardanoNetwork.TESTNET
+            else PycardanoNetwork.MAINNET,
+        )
+        return str(stake_address_obj)
+
+    raise InvalidMethod(method=method)
+
+
+def get_stake_address_balance(
+    stake_address,
+    network=CardanoNetwork.TESTNET,
+    method=ScriptMethod.METHOD_DOCKER_CLI,
+):
+    """
+    Get the total reward balance in stake address
+    :param stake_address: Stake Address String
+    :param network: Network where the function will get the staking balance
+    :param method: Method that will be used for getting the staking balance
+    :return: Stake Reward Balance (in Lovelace)
+    """
+
+    masspayments_settings = get_script_settings()
+
+    if not isinstance(stake_address, str):
+        raise InvalidType(
+            message="Invalid Stake Address Type.",
+            type=type(stake_address),
+        )
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+        raise InvalidNetwork(network=network)
+
+    if method in [
+        ScriptMethod.METHOD_DOCKER_CLI,
+        ScriptMethod.METHOD_HOST_CLI,
+        ScriptMethod.METHOD_PYCARDANO,
+    ]:
+        prefix = masspayments_settings.command_prefix(method)
+        if method == ScriptMethod.METHOD_PYCARDANO:
+            pycardano_context = CACHE_VALUES.get("pycardano_context")
+            prefix = pycardano_context.command_prefix
+        network_flag = masspayments_settings.network_flag(network)
+
+        rewards_command = STAKE_REWARDS_COMMAND.format(
+            prefix=prefix,
+            address=stake_address,
+            network=network_flag,
+        )
+        try:
+            rewards_results = (
+                subprocess_popen(
+                    rewards_command.split(),
+                    stdout=subprocess.PIPE,
+                )
+                .stdout.read()
+                .decode("utf-8")
+            )
+            rewards_details = json.loads(rewards_results)
+
+            return rewards_details[0].get("rewardAccountBalance")
+        except Exception as e:
+            raise ScriptError(
+                message="Error during Stake Address Balance Fetch.",
+                error=e,
+                traceback=traceback.format_exc(),
+                additional_context={"stake_address": stake_address},
+            )
 
     raise InvalidMethod(method=method)

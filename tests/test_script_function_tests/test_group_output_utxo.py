@@ -166,9 +166,15 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
-        with patch(
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {
+                "source_signing_key_file": ["test.skey"],
+            },
+        ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
         ):
@@ -197,6 +203,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         mock_pycardano_context = CardanoCLIChainContext(
@@ -215,6 +222,7 @@ class TestProcess(TestCase):
             {
                 "pycardano_context": mock_pycardano_context,
                 "source_address": MOCK_ADDRESS,
+                "metadata_file": None,
             },
         ):
             try:

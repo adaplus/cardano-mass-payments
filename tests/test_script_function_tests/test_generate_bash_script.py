@@ -607,6 +607,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
@@ -666,6 +667,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
@@ -728,6 +730,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         mock_pycardano_context = CardanoCLIChainContext(

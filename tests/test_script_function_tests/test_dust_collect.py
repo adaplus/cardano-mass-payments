@@ -39,7 +39,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -61,7 +61,7 @@ class TestProcess(TestCase):
                 payment_group_details=[],
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -83,7 +83,7 @@ class TestProcess(TestCase):
                 payment_group_details=[],
                 transaction_draft_filename="test_tx.draft",
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -105,7 +105,7 @@ class TestProcess(TestCase):
                 payment_group_details=[],
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -142,7 +142,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -166,7 +166,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename=-1,
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -190,7 +190,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size="invalid",
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -214,7 +214,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=-1,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
             )
         except Exception as e:
             result = e
@@ -262,7 +262,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
                 network="invalid",
             )
         except Exception as e:
@@ -286,7 +286,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
                 method="invalid",
             )
         except Exception as e:
@@ -310,7 +310,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
                 dust_collection_method="invalid",
             )
         except Exception as e:
@@ -335,7 +335,7 @@ class TestProcess(TestCase):
                 transaction_draft_filename="test_tx.draft",
                 max_tx_size=1000,
                 source_address=MOCK_ADDRESS,
-                source_details={MOCK_ADDRESS: "test.skey"},
+                source_details={MOCK_ADDRESS: ["test.skey"]},
                 dust_collection_threshold="invalid",
             )
         except Exception as e:
@@ -343,6 +343,31 @@ class TestProcess(TestCase):
 
         assert isinstance(result, InvalidType)
         assert result.message == "Invalid Dust Threshold Type."
+        assert result.additional_context["type"] == INVALID_STRING_TYPE
+
+    def test_invalid_reward_details(self):
+        try:
+            result = dust_collect(
+                input_utxos=[
+                    InputUTXO(
+                        address=MOCK_ADDRESS,
+                        tx_hash="0000000000000000000000000000000000000000000000000000000000000000",
+                        tx_index=i,
+                        amount=1000,
+                    )
+                    for i in range(1000)
+                ],
+                transaction_draft_filename="test_tx.draft",
+                max_tx_size=1000,
+                source_address=MOCK_ADDRESS,
+                source_details={MOCK_ADDRESS: ["test.skey"]},
+                reward_details="invalid",
+            )
+        except Exception as e:
+            result = e
+
+        assert isinstance(result, InvalidType)
+        assert result.message == "Invalid Reward Details Type."
         assert result.additional_context["type"] == INVALID_STRING_TYPE
 
     def test_unexpected_error_during_command_execution(self):
@@ -364,7 +389,7 @@ class TestProcess(TestCase):
                     transaction_draft_filename="test_tx.draft",
                     max_tx_size=1000,
                     source_address=MOCK_ADDRESS,
-                    source_details={MOCK_ADDRESS: "test.skey"},
+                    source_details={MOCK_ADDRESS: ["test.skey"]},
                 )
             except Exception as e:
                 result = e
@@ -407,7 +432,7 @@ class TestProcess(TestCase):
                     transaction_draft_filename="test_tx.draft",
                     max_tx_size=1000,
                     source_address=MOCK_ADDRESS,
-                    source_details={MOCK_ADDRESS: "test.skey"},
+                    source_details={MOCK_ADDRESS: ["test.skey"]},
                 )
             except Exception as e:
                 result = e
@@ -450,7 +475,7 @@ class TestProcess(TestCase):
                     transaction_draft_filename="test_tx.draft",
                     max_tx_size=1000,
                     source_address=MOCK_ADDRESS,
-                    source_details={MOCK_ADDRESS: "test.skey"},
+                    source_details={MOCK_ADDRESS: ["test.skey"]},
                 )
             except Exception as e:
                 result = e
@@ -470,6 +495,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
@@ -516,6 +542,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
@@ -562,6 +589,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         with patch(
@@ -610,6 +638,7 @@ class TestProcess(TestCase):
         mock_responses["cat"] = {}
         mock_responses["build-raw"] = {}
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         mock_pycardano_context = CardanoCLIChainContext(
@@ -632,6 +661,7 @@ class TestProcess(TestCase):
             {
                 "pycardano_context": mock_pycardano_context,
                 "source_address": MOCK_ADDRESS,
+                "metadata_file": None,
             },
         ):
             try:
@@ -649,10 +679,61 @@ class TestProcess(TestCase):
                     max_tx_size=1000,
                     source_address=MOCK_ADDRESS,
                     source_details={
-                        MOCK_ADDRESS: mock_skey_file.name,
-                        MOCK_ADDRESS2: mock_skey_file.name,
+                        MOCK_ADDRESS: [mock_skey_file.name],
+                        MOCK_ADDRESS2: [mock_skey_file.name],
                     },
                     method=ScriptMethod.METHOD_PYCARDANO,
+                )
+            except Exception as e:
+                result = e
+
+        assert isinstance(result, dict)
+        dust_group_details = result.get("dust_group_details", {})
+        assert len(dust_group_details) == 1
+
+    def test_success_with_reward_details(self):
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses["sign"] = {}
+        mock_responses["rm"] = {}
+        mock_responses["cat"] = {}
+        mock_responses["build-raw"] = {}
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
+
+        with patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ):
+            try:
+                result = dust_collect(
+                    input_utxos=[
+                        InputUTXO(
+                            address=(MOCK_ADDRESS if i % 10 == 0 else MOCK_ADDRESS2),
+                            tx_hash="0000000000000000000000000000000000000000000000000000000000000000",
+                            tx_index=i,
+                            amount=1000,
+                        )
+                        for i in range(1000)
+                    ],
+                    transaction_draft_filename="test_tx.draft",
+                    max_tx_size=1000,
+                    source_address=MOCK_ADDRESS,
+                    source_details={
+                        MOCK_ADDRESS: "test.skey",
+                        MOCK_ADDRESS2: "test.skey",
+                    },
+                    dust_collection_method=DustCollectionMethod.COLLECT_TO_SOURCE,
+                    reward_details={
+                        "stake_address": "test_stake_address",
+                        "stake_amount": 1000,
+                    },
                 )
             except Exception as e:
                 result = e

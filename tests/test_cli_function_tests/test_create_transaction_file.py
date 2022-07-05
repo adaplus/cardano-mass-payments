@@ -146,6 +146,24 @@ class TestProcess(TestCase):
         assert result.message == "Invalid TTL argument type."
         assert result.additional_context == {"type": type(0.1)}
 
+    def test_invalid_reward_details(self):
+        try:
+            result = create_transaction_file(
+                input_arg=1,
+                output_arg=10,
+                method=ScriptMethod.METHOD_DOCKER_CLI,
+                is_draft=False,
+                fee=100,
+                ttl=100,
+                reward_details=-1,
+            )
+        except Exception as e:
+            result = e
+
+        assert isinstance(result, ScriptError)
+        assert result.message == "Invalid reward details type."
+        assert result.additional_context == {"type": type(-1)}
+
     def test_unexpected_error_during_command_execution(self):
         with patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
@@ -190,6 +208,10 @@ class TestProcess(TestCase):
                     is_draft=False,
                     fee=100,
                     ttl=100,
+                    reward_details={
+                        "stake_address": "test_stake_address",
+                        "stake_amount": 1000,
+                    },
                 )
             except Exception as e:
                 result = e

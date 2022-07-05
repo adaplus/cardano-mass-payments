@@ -61,11 +61,20 @@ class PreparationDetail:
     :param prep_output: List of Preparation Transaction Payment Details
     :param submission_status: Preparation Transaction submission status
     :param tx_hash_id: Hash String of the Preparation Transaction
+    :param withdrawal_amount: Withdrawal Amount in Lovelace
     """
 
-    def __init__(self, prep_input, prep_output, submission_status=None, tx_hash_id=""):
+    def __init__(
+        self,
+        prep_input,
+        prep_output,
+        submission_status=None,
+        tx_hash_id="",
+        reward_details={},
+    ):
         self.prep_input = prep_input
         self.prep_output = prep_output
+        self.reward_details = reward_details
         self.submission_status = (
             submission_status or TransactionStatus.NOT_YET_SUBMITTED
         )
@@ -208,6 +217,7 @@ class TransactionPlan:
                         prep_details.get("submission_status"),
                     ),
                     tx_hash_id=prep_details.get("tx_hash_id"),
+                    reward_details=prep_details.get("reward_details", {}),
                 ),
                 group_details=[
                     PaymentGroup(

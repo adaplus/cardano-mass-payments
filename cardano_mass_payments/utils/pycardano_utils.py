@@ -22,6 +22,10 @@ class CardanoCLIChainContext(ChainContext):
             ScriptMethod.METHOD_PYCARDANO,
             use_docker_cli,
         )
+        self.wallet_command_prefix = masspayments_settings.wallet_command_prefix(
+            ScriptMethod.METHOD_PYCARDANO,
+            use_docker_cli,
+        )
         self._service_name = "cli"
         self._last_known_block_slot = 0
         self._genesis_param = None

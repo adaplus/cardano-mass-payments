@@ -55,6 +55,8 @@ from .cli_utils import (
     delete_temp_file,
     get_latest_slot_number,
     get_protocol_parameters,
+    get_stake_address_balance,
+    get_staking_address,
     get_total_amount_plus_fee,
     get_transaction_byte_size,
     get_transaction_fee,
@@ -76,7 +78,9 @@ def parse_sources_csv_file(filename):
         csv_reader = csv.reader(source_file)
         for source_detail in csv_reader:
             address = source_detail[0].strip()
-            source_details[address] = source_detail[1].strip()
+            source_details[address] = [sk_file.strip() for sk_file in source_detail[1:]]
+            if len(source_details[address]) < 1:
+                raise EmptyList(field="Witness List")
     if len(source_details) == 0:
         raise EmptyList(field="Witness List")
     return source_details
@@ -113,6 +117,7 @@ def group_output_utxo(
     :param output_list: utxo output list to be grouped
     :param network: Network where the function will get the minimum transaction fee
     :param method: Method that will be used for creating transaction draft
+    :param reward_details: Map containing source stake rewards
     :return: Initial Groupings List of Output UTxO details
     """
     if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
@@ -186,6 +191,7 @@ def preparation_step(
     payments_utxo_file,
     network=CardanoNetwork.TESTNET,
     method=ScriptMethod.METHOD_DOCKER_CLI,
+    include_rewards=False,
 ):
     """
     Prepare and create an initial input utxo transaction
@@ -194,8 +200,7 @@ def preparation_step(
     :param payments_utxo_file: csv file containing payment utxo details
     :param network: Network where the function will get the cardano details
     :param method: Method that will be used for creating initial input transaction
-    :param dust_collection_method: Method that will be used for dust collection
-    :param dust_collection_threshold: Maximum amount that will be the basis for dust collection
+    :param include_rewards: Flag on whether to include getting the stake rewards
     :return: initial groups + initial transaction details
     """
     if not isinstance(source_address, str):
@@ -212,6 +217,11 @@ def preparation_step(
         raise InvalidType(
             type=type(payments_utxo_file),
             message="Invalid payments UTxO file type.",
+        )
+    if not isinstance(include_rewards, bool):
+        raise InvalidType(
+            type=type(include_rewards),
+            message="Invalid include rewards type.",
         )
 
     # Parse File
@@ -245,6 +255,24 @@ def preparation_step(
             traceback=traceback.format_exc(),
             additional_context={"address": address},
         )  # Error during wallet utxo fetch
+
+    # Include Rewards
+    stake_reward_details = {}
+    if include_rewards:
+        stake_address = get_staking_address(
+            full_address=source_address,
+            network=network,
+            method=method,
+        )
+        stake_balance = get_stake_address_balance(
+            stake_address=stake_address,
+            network=network,
+            method=method,
+        )
+        stake_reward_details = {
+            "stake_address": stake_address,
+            "stake_amount": stake_balance,
+        }
 
     # Create Initial Output Group List
     try:
@@ -299,6 +327,9 @@ def preparation_step(
     total_input_amount = 0
     for utxo_detail in wallet_utxo_details:
         total_input_amount += utxo_detail.amount
+
+    # Add rewards
+    total_input_amount += stake_reward_details.get("stake_amount", 0)
 
     if total_input_amount < total_output_amount:
         raise InsufficientBalance(
@@ -366,6 +397,7 @@ def preparation_step(
         "transaction_filename": transaction_draft_file,
         "max_tx_size": max_tx_size,
         "require_dust_collection": tx_size > max_tx_size,
+        "stake_reward_details": stake_reward_details,
     }
 
 
@@ -380,6 +412,7 @@ def dust_collect(
     method=ScriptMethod.METHOD_DOCKER_CLI,
     dust_collection_method=DustCollectionMethod.COLLECT_TO_SOURCE,
     dust_collection_threshold=10000000,
+    reward_details={},
 ):
     """
     Create an updated tx Draft with dust collected utxos
@@ -393,6 +426,7 @@ def dust_collect(
     :param method: Method that will be used for creating the tx files
     :param dust_collection_method: Dust collection method used (Where will the dust utxos be placed)
     :param dust_collection_threshold: Basis amount for dust collection
+    :param reward_details: Map containing source stake rewards
     :return: Updated init details
     """
 
@@ -431,6 +465,11 @@ def dust_collect(
             type=type(dust_collection_method),
             message="Invalid Dust Collection Method Type.",
         )
+    if not isinstance(reward_details, dict):
+        raise InvalidType(
+            type=type(reward_details),
+            message="Invalid Reward Details Type.",
+        )
     if network not in [cn for cn in CardanoNetwork]:
         raise InvalidNetwork(network=network)
     if method not in [sm for sm in ScriptMethod]:
@@ -460,9 +499,10 @@ def dust_collect(
                 dust_utxo_groups[dust_address] = []
             dust_utxo_groups[dust_address].append(utxo_detail)
 
-    signing_key_files = list(
-        set([source_details[address] for address in source_details]),
-    )
+    signing_key_files = []
+    for address in source_details:
+        signing_key_files += source_details[address]
+    signing_key_files = list(set(signing_key_files))
 
     final_dust_group_details = {}
 
@@ -511,9 +551,10 @@ def dust_collect(
             temp_input_num_witness = set()
             for input_utxo in temp_dust_inputs:
                 temp_input_num_witness.add(input_utxo.address)
-            temp_signing_key_files = list(
-                set([source_details[address] for address in temp_input_num_witness]),
-            )
+            temp_signing_key_files = []
+            for address in temp_input_num_witness:
+                temp_signing_key_files += source_details[address]
+            temp_signing_key_files = list(set(temp_signing_key_files))
 
             temp_draft_file = None
             if method == ScriptMethod.METHOD_PYCARDANO:
@@ -535,7 +576,7 @@ def dust_collect(
             temp_input_fee = get_transaction_fee(
                 len(temp_dust_inputs),
                 1,
-                num_witness=len(temp_input_num_witness),
+                num_witness=len(temp_signing_key_files),
                 draft_file=temp_draft_file,
                 network=network,
                 method=method,
@@ -585,6 +626,7 @@ def dust_collect(
         "wallet_utxos": new_wallet_utxos,
         "transaction_filename": transaction_draft_filename,
         "max_tx_size": max_tx_size,
+        "stake_reward_details": reward_details,
     }
 
 
@@ -594,6 +636,7 @@ def adjust_utxos(
     prep_tx_file,
     source_address,
     max_tx_size,
+    reward_details={},
     allow_ttl_slots=100,
     network=CardanoNetwork.TESTNET,
     method=ScriptMethod.METHOD_DOCKER_CLI,
@@ -605,6 +648,7 @@ def adjust_utxos(
     :param prep_tx_file: Filename of the preparation Tx draft file
     :param source_address: Source Address
     :param max_tx_size: Maximum Transaction Size
+    :param reward_details: Map containing source stake rewards (Default: {})
     :param allow_ttl_slots: Maximum Allowable TTL slots for the transactions (Default: 100)
     :param network: Network where the function will get the cardano details
     :param method: Method that will be used for creating transaction drafts + fetching cardano details
@@ -637,6 +681,11 @@ def adjust_utxos(
         raise InvalidType(
             type=type(allow_ttl_slots),
             message="Invalid Allow TTL Slots Type.",
+        )
+    if not isinstance(reward_details, dict):
+        raise InvalidType(
+            type=type(reward_details),
+            message="Invalid Reward Details Type.",
         )
     if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
         raise InvalidNetwork(network=network)
@@ -812,6 +861,9 @@ def adjust_utxos(
             temp_input_index = 0
             input_total = sum([input_utxo.amount for input_utxo in input_utxo_list])
 
+            # Add rewards
+            input_total += reward_details.get("stake_amount", 0)
+
             change_amount = input_total - temp_o_tfee
             if input_total < temp_o_tfee:
                 raise InsufficientBalance(
@@ -852,6 +904,7 @@ def adjust_utxos(
             tmp_size = get_transaction_byte_size(
                 input_arg=temp_input_utxos,
                 output_arg=temp_prep_list,
+                reward_details=reward_details,
                 method=method,
                 network=network,
             )
@@ -884,6 +937,7 @@ def adjust_utxos(
         prep_detail=PreparationDetail(
             prep_input=final_input_list,
             prep_output=final_prep_list,
+            reward_details=reward_details,
         ),
         group_details=final_group_list,
         network=network,
@@ -976,6 +1030,7 @@ def generate_bash_script(
     prep_output_utxos = transaction_plan.prep_detail.prep_output
     group_details_list = transaction_plan.group_details
     prep_tx_submission_status = transaction_plan.prep_detail.submission_status
+    reward_details = transaction_plan.prep_detail.reward_details
 
     # Set num_witness
     input_address_set = set()
@@ -1025,29 +1080,33 @@ def generate_bash_script(
     ):
         signing_key_files = set()
         for address in signing_key_file_details:
-            old_signing_key_file = signing_key_file_details[address]
-            signing_key_file_and_dir = os.path.split(old_signing_key_file)
-            new_signing_key_file = f"{check_and_create_temp_directory(method)}{signing_key_file_and_dir[1]}"
-            signing_key_file_details[address] = new_signing_key_file
-            signing_key_files.add(signing_key_file_details[address])
+            new_signing_key_files = []
+            for old_signing_key_file in signing_key_file_details[address]:
+                signing_key_file_and_dir = os.path.split(old_signing_key_file)
+                new_signing_key_file = f"{check_and_create_temp_directory(method)}{signing_key_file_and_dir[1]}"
+                signing_key_files.add(new_signing_key_file)
 
-            signing_key_file_setup_command_list.add(
-                CREATE_FILE_COPY_TO_DOCKER.format(
-                    source_filename=old_signing_key_file,
-                    filename=new_signing_key_file,
-                    prefix=masspayments_settings.command_prefix(
-                        ScriptMethod.METHOD_DOCKER_CLI,
+                signing_key_file_setup_command_list.add(
+                    CREATE_FILE_COPY_TO_DOCKER.format(
+                        source_filename=old_signing_key_file,
+                        filename=new_signing_key_file,
+                        prefix=masspayments_settings.command_prefix(
+                            ScriptMethod.METHOD_DOCKER_CLI,
+                        ),
                     ),
-                ),
-            )
-            signing_key_file_delete_command_list.add(
-                DELETE_FILE.format(
-                    prefix=masspayments_settings.command_prefix(
-                        ScriptMethod.METHOD_DOCKER_CLI,
+                )
+                signing_key_file_delete_command_list.add(
+                    DELETE_FILE.format(
+                        prefix=masspayments_settings.command_prefix(
+                            ScriptMethod.METHOD_DOCKER_CLI,
+                        ),
+                        filename=new_signing_key_file,
                     ),
-                    filename=new_signing_key_file,
-                ),
-            )
+                )
+
+                new_signing_key_files.append(new_signing_key_file)
+
+            signing_key_file_details[address] = new_signing_key_files
 
     # Dust Collection Commands
     dust_commands = {}
@@ -1071,9 +1130,10 @@ def generate_bash_script(
                         )
                 dust_signing_file_parameters = []
                 for address in dust_input_witnesses:
-                    dust_signing_file_parameters.append(
-                        f"--signing-key-file {signing_key_file_details[address]}",
-                    )
+                    for dust_sk_file in signing_key_file_details[address]:
+                        dust_signing_file_parameters.append(
+                            f"--signing-key-file {dust_sk_file}",
+                        )
                 dust_command_details.append(
                     {
                         "create_command": create_transaction_command(
@@ -1142,6 +1202,7 @@ def generate_bash_script(
             filename=prep_draft_filename,
             prefix=prefix,
             metadata_filename=metadata_copy_filename,
+            reward_details=reward_details,
         )
 
         # Get Prep TX Fee
@@ -1167,6 +1228,7 @@ def generate_bash_script(
         prep_total_input_amount = sum(
             [utxo_detail.amount for utxo_detail in prep_input_utxos],
         )
+        prep_total_input_amount += reward_details.get("stake_amount", 0)
         prep_total_output_amount = sum(
             [utxo_detail.amount for utxo_detail in prep_output_utxos],
         )
@@ -1190,6 +1252,7 @@ def generate_bash_script(
             ttl=ttl,
             metadata_filename=metadata_copy_filename,
             is_draft=False,
+            reward_details=reward_details,
         )
 
         # Sign Prep TX
@@ -1199,9 +1262,10 @@ def generate_bash_script(
         signing_file_commands_list = []
 
         for address in input_address_set:
-            signing_file_commands_list.append(
-                f"--signing-key-file {signing_key_file_details[address]}",
-            )
+            for address_sk_file in signing_key_file_details[address]:
+                signing_file_commands_list.append(
+                    f"--signing-key-file {address_sk_file}",
+                )
 
         prep_tx_sign_commands.append(
             TRANSACTION_SIGN.format(
@@ -1240,9 +1304,10 @@ def generate_bash_script(
     group_tx_sign_commands = []
     group_tx_submit_commands = []
     group_tx_allowed_index_list = []
-    group_signing_key_parameter = (
-        f"--signing-key-file {signing_key_file_details[source_address]}"
-    )
+    group_sk_file_param_list = []
+    for group_sk_file in signing_key_file_details[source_address]:
+        group_sk_file_param_list.append(f"--signing-key-file {group_sk_file}")
+    group_signing_key_parameter = " ".join(group_sk_file_param_list)
     group_tx_ongoing_commands = []
     for group_detail in group_details_list:
         group_index = group_detail.index

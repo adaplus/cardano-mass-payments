@@ -171,6 +171,21 @@ class TestProcess(TestCase):
         assert result.message == "Invalid is draft argument type."
         assert result.additional_context == {"type": type(-1)}
 
+    def test_invalid_reward_details(self):
+        try:
+            result = create_transaction_command(
+                input_arg=1,
+                output_arg=10,
+                filename="test_filename",
+                reward_details=-1,
+            )
+        except Exception as e:
+            result = e
+
+        assert isinstance(result, ScriptError)
+        assert result.message == "Invalid reward details type."
+        assert result.additional_context == {"type": type(-1)}
+
     def test_success_only_required(self):
         with patch.dict(
             "cardano_mass_payments.cache.CACHE_VALUES",
@@ -209,6 +224,10 @@ class TestProcess(TestCase):
                     fee=100,
                     ttl=100,
                     metadata_filename="test_metadata",
+                    reward_details={
+                        "stake_address": "test_stake_address",
+                        "stake_amount": 1000,
+                    },
                 )
             except Exception as e:
                 result = e
@@ -219,7 +238,8 @@ class TestProcess(TestCase):
             tx_in_details="--tx-in 0000000000000000000000000000000000000000000000000000000000000000#1 ",
             tx_out_details="--tx-out test_source_address+0 " * 10,
             tx_filename="test_filename",
-            extra_details="--fee 100 --invalid-hereafter 100 --metadata-json-file test_metadata ",
+            extra_details="--withdrawal test_stake_address+1000 --fee 100 --invalid-hereafter 100 "
+            "--metadata-json-file test_metadata ",
         )
 
     def test_success_input_list(self):

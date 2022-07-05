@@ -10,8 +10,14 @@ MOCK_SKEY_CONTENT = {
     "description": "Payment Signing Key",
     "cborHex": "5820b4ea04caeb58e1dbcb734dcf3522b634ac12bb09960dcebd9e79b32735679948",
 }
+MOCK_METADATA_CONTENT = {"1337": {"name": "hello world", "completed": 0}}
 MOCK_ADDRESS = "addr_test1vpv2u2aqrvp4qnsw93qck3xagvwlleqs29erxtz3322t8ls46s7ew"
 MOCK_ADDRESS2 = "addr_test1vqfvx50fxl8h57jyjsczhvw3u4j6lyecfexs40tkwz7kdcg6d6t3t"
+MOCK_STAKE_ADDRESS = "stake_test1upwy8nx7zj0p3n3tzdrwd4f5f4d4rmwrzf9yq438e64vgdc5pkphd"
+MOCK_FULL_ADDRESS = (
+    "addr_test1qra9ls6le545hx58t4lj23la3zaufneynfm0rwtg384msz2ug0xdu9y7rr8zky6xum2ngn2m28"
+    "kuxyj2gptz0n42csmstuujtp"
+)
 MOCK_PROTOCOL_PARAMETERS = {
     "maxTxSize": 1000,
     "txFeeFixed": 100,
@@ -70,8 +76,8 @@ def generate_mock_popen_function(mock_responses):
 
             if check_result:
                 response = mock_responses[key]
-                if isinstance(response, dict):
-                    response_str = json.dumps(response)
+                if isinstance(response, dict) or isinstance(response, list):
+                    response_str = json.dumps(response).strip()
                 elif response:
                     response_str = response
                 else:
@@ -85,7 +91,7 @@ def generate_mock_popen_function(mock_responses):
                     ["echo", response_str],
                     stdout=stdout,
                     stderr=stderr,
-                    shell=shell,
+                    shell=False,
                 )
         return subprocess.Popen(
             ["date", "-1"],
