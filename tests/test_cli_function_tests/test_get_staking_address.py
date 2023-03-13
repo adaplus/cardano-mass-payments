@@ -7,7 +7,6 @@ from cardano_mass_payments.constants.exceptions import (
     InvalidMethod,
     InvalidNetwork,
     InvalidType,
-    ScriptError,
 )
 from cardano_mass_payments.utils.cli_utils import get_staking_address
 from tests.mock_responses import MOCK_TEST_RESPONSES
@@ -63,9 +62,9 @@ class TestProcess(TestCase):
         assert isinstance(result, InvalidMethod)
         assert result.additional_context["method"] == "invalid"
 
-    def test_unexpected_error_during_command_execution(self):
+    def test_unexpected_error_during_address_conversion(self):
         with patch(
-            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            "cardano_mass_payments.utils.cli_utils.Address.from_primitive",
             side_effect=mock_raise_internal_error,
         ):
             try:
@@ -76,7 +75,7 @@ class TestProcess(TestCase):
             except Exception as e:
                 result = e
 
-        assert isinstance(result, ScriptError)
+        assert isinstance(result, Exception)
 
     def test_success(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)

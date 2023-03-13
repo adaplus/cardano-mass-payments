@@ -109,7 +109,7 @@ def parse_payment_utxo_file(filename):
 
 def group_output_utxo(
     output_list,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -120,7 +120,7 @@ def group_output_utxo(
     :param reward_details: Map containing source stake rewards
     :return: Initial Groupings List of Output UTxO details
     """
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
     if not isinstance(output_list, list):
         raise InvalidType(type=type(output_list), message="Invalid output list type.")
@@ -189,7 +189,7 @@ def preparation_step(
     source_address,
     source_details,
     payments_utxo_file,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
     include_rewards=False,
 ):
@@ -408,7 +408,7 @@ def dust_collect(
     source_address,
     source_details,
     payment_group_details=[],
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
     dust_collection_method=DustCollectionMethod.COLLECT_TO_SOURCE,
     dust_collection_threshold=10000000,
@@ -638,7 +638,7 @@ def adjust_utxos(
     max_tx_size,
     reward_details={},
     allow_ttl_slots=100,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -687,7 +687,7 @@ def adjust_utxos(
             type=type(reward_details),
             message="Invalid Reward Details Type.",
         )
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     # Group output groups
@@ -966,7 +966,7 @@ def generate_bash_script(
     source_address,
     metadata_file=None,
     allow_ttl_slots=100,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
     store_in_file=True,
     add_comments=False,

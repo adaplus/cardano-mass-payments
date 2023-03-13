@@ -455,7 +455,7 @@ class TestProcess(TestCase):
 
     def test_insufficient_balance(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -502,7 +502,7 @@ class TestProcess(TestCase):
 
     def test_error_during_get_latest_slot_number(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -553,7 +553,7 @@ class TestProcess(TestCase):
 
     def test_error_during_get_transaction_byte_size(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -603,7 +603,7 @@ class TestProcess(TestCase):
 
     def test_error_during_get_total_amount_plus_fee(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -653,7 +653,7 @@ class TestProcess(TestCase):
 
     def test_success(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -706,7 +706,7 @@ class TestProcess(TestCase):
 
     def test_success_pycardano(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},
@@ -721,7 +721,7 @@ class TestProcess(TestCase):
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
 
         mock_pycardano_context = CardanoCLIChainContext(
-            cardano_network=CardanoNetwork.TESTNET,
+            cardano_network=CardanoNetwork.PREPROD,
             use_docker_cli=True,
         )
 
@@ -770,7 +770,7 @@ class TestProcess(TestCase):
 
     def test_success_with_reward_details(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {"lovelace": 1000000000},

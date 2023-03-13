@@ -66,7 +66,7 @@ class TestProcess(TestCase):
         mock_responses[("query", "tip")] = {"slot": 1}
 
         mock_pycardano_context = CardanoCLIChainContext(
-            cardano_network=CardanoNetwork.TESTNET,
+            cardano_network=CardanoNetwork.PREPROD,
             use_docker_cli=True,
         )
 

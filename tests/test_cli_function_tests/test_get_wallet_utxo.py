@@ -109,7 +109,7 @@ class TestProcess(TestCase):
     def test_error_during_get_extra_utxo_details(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
 
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {
@@ -142,7 +142,7 @@ class TestProcess(TestCase):
 
     def test_success_with_no_token_utxo(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {
@@ -167,7 +167,7 @@ class TestProcess(TestCase):
     def test_success_with_token_utxos(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
 
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {
@@ -196,7 +196,7 @@ class TestProcess(TestCase):
 
     def test_success_pycardano(self):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
                 "address": MOCK_ADDRESS,
                 "value": {
@@ -206,7 +206,7 @@ class TestProcess(TestCase):
         }
         mock_responses["rm"] = {}
         mock_pycardano_context = CardanoCLIChainContext(
-            cardano_network=CardanoNetwork.TESTNET,
+            cardano_network=CardanoNetwork.PREPROD,
             use_docker_cli=True,
         )
 

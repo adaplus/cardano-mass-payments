@@ -27,15 +27,11 @@ from ..constants.commands import (
     CHECK_TEMP_DIRECTORY,
     CREATE_FILE_COPY_TO_DOCKER,
     DELETE_FILE,
-    INSPECT_ADDRESS_COMMAND,
-    INSPECT_ADDRESS_DOCKER_COMMAND,
     QUERY_PROTOCOL_PARAMETERS,
     QUERY_PROTOCOL_PARAMETERS_WITH_FILE,
     QUERY_TIP,
     QUERY_WALLET_UTXO,
     READ_FILE,
-    STAKE_ADDRESS_CONVERT_COMMAND,
-    STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND,
     STAKE_REWARDS_COMMAND,
     TRANSACTION_BUILD,
     TRANSACTION_FEE,
@@ -80,7 +76,7 @@ def check_and_create_temp_directory(method=ScriptMethod.METHOD_DOCKER_CLI):
                 error=check_temp_error,
             )
 
-        temp_directory = "/tmp/"
+        temp_directory = "/tmp-files/"
     elif method in [ScriptMethod.METHOD_HOST_CLI, ScriptMethod.METHOD_PYCARDANO]:
         temp_directory = tempfile.gettempdir()
 
@@ -153,7 +149,7 @@ def read_file(filename, method=ScriptMethod.METHOD_DOCKER_CLI):
 
 
 def get_protocol_parameters(
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
     return_file=False,
 ):
@@ -167,7 +163,7 @@ def get_protocol_parameters(
 
     masspayments_settings = get_script_settings()
 
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     if not isinstance(return_file, bool):
@@ -233,7 +229,7 @@ def get_protocol_parameters(
 
 
 def get_latest_slot_number(
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -245,7 +241,7 @@ def get_latest_slot_number(
 
     masspayments_settings = get_script_settings()
 
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     if method in [
@@ -636,7 +632,7 @@ def sign_tx_file(
     tx_file,
     signing_key_files,
     method=ScriptMethod.METHOD_DOCKER_CLI,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
 ):
     """
     Create a signed transaction file
@@ -753,7 +749,7 @@ def get_transaction_byte_size(
     output_arg,
     reward_details={},
     method=ScriptMethod.METHOD_DOCKER_CLI,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     signing_key_files=None,
 ):
     """
@@ -985,7 +981,7 @@ def get_transaction_fee(
     num_output,
     draft_file=None,
     num_witness=1,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1025,7 +1021,7 @@ def get_transaction_fee(
         raise EmptyList(field="Output UTxO List")
     if num_witness < 1:
         raise EmptyList(field="Witness List")
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     remove_draft_file = False
@@ -1127,7 +1123,7 @@ def get_total_amount_plus_fee(
     input_arg,
     output_list,
     num_witness=1,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1164,7 +1160,7 @@ def get_total_amount_plus_fee(
         raise EmptyList(field="Output UTxO List")
     if num_witness < 1:
         raise EmptyList(field="Witness List")
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     total_amount = 0
@@ -1247,7 +1243,7 @@ def get_utxo_extra_details(utxo_extras_map):
 
 def get_wallet_utxo(
     address,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1263,7 +1259,7 @@ def get_wallet_utxo(
     if not isinstance(address, str):
         raise InvalidType(type=type(address), message="Invalid address type.")
 
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     if method in [
@@ -1359,7 +1355,7 @@ def get_wallet_utxo(
 
 def get_utxo_hash(
     transaction_file,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1372,7 +1368,7 @@ def get_utxo_hash(
 
     masspayments_settings = get_script_settings()
 
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     if not isinstance(transaction_file, str):
@@ -1408,7 +1404,7 @@ def get_utxo_hash(
 
 def get_staking_address(
     full_address,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1419,111 +1415,31 @@ def get_staking_address(
     :return: Staking Address String
     """
 
-    masspayments_settings = get_script_settings()
-
     if not isinstance(full_address, str):
         raise InvalidType(message="Invalid Full Address Type.", type=type(full_address))
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
-    if method in [
+    if method not in [
         ScriptMethod.METHOD_DOCKER_CLI,
         ScriptMethod.METHOD_HOST_CLI,
+        ScriptMethod.METHOD_PYCARDANO,
     ]:
-        prefix = masspayments_settings.wallet_command_prefix(method)
-        if method == ScriptMethod.METHOD_PYCARDANO:
-            pycardano_context = CACHE_VALUES.get("pycardano_context")
-            prefix = pycardano_context.wallet_command_prefix
+        raise InvalidMethod(method=method)
 
-        inspect_address_command = (
-            INSPECT_ADDRESS_DOCKER_COMMAND.format(
-                prefix=prefix,
-                full_address=full_address,
-            )
-            if prefix != ""
-            else INSPECT_ADDRESS_COMMAND.format(
-                full_address=full_address,
-            )
-        )
-        try:
-            inspect_address_results = (
-                subprocess_popen(
-                    inspect_address_command,
-                    stdout=subprocess.PIPE,
-                    shell=True,
-                )
-                .stdout.read()
-                .decode("utf-8")
-            )
-            full_address_details = json.loads(inspect_address_results)
-            staking_key_hash = full_address_details.get("stake_key_hash")
-        except Exception as e:
-            raise ScriptError(
-                message="Error during Address Inspection via Cardano CLI.",
-                error=e,
-                traceback=traceback.format_exc(),
-                additional_context={"full_address": full_address},
-            )
-
-        # Stake Hash Additional Bytes
-        # Stated in https://cardano.stackexchange.com/questions/7055/staking-address-bech32
-        staking_key_hash = (
-            f"e1{staking_key_hash}"
-            if network == CardanoNetwork.MAINNET
-            else f"e0{staking_key_hash}"
-        )
-        staking_address_command = (
-            STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND.format(
-                prefix=prefix,
-                stake_prefix="stake_"
-                if network == CardanoNetwork.MAINNET
-                else "stake_test",
-                stake_hash=staking_key_hash,
-            )
-            if prefix != ""
-            else STAKE_ADDRESS_CONVERT_COMMAND.format(
-                stake_prefix="stake_"
-                if network == CardanoNetwork.MAINNET
-                else "stake_test",
-                stake_hash=staking_key_hash,
-            )
-        )
-        try:
-            staking_address = (
-                subprocess_popen(
-                    staking_address_command,
-                    stdout=subprocess.PIPE,
-                    shell=True,
-                )
-                .stdout.read()
-                .decode("utf-8")
-                .strip()
-            )
-        except Exception as e:
-            raise ScriptError(
-                message="Error during Stake Address Fetch.",
-                error=e,
-                traceback=traceback.format_exc(),
-                additional_context={"full_address": full_address},
-            )
-
-        return staking_address
-    elif method == ScriptMethod.METHOD_PYCARDANO:
-        full_address_obj = Address.from_primitive(full_address)
-        stake_address_obj = Address(
-            staking_part=full_address_obj.staking_part,
-            network=PycardanoNetwork.TESTNET
-            if network == CardanoNetwork.TESTNET
-            else PycardanoNetwork.MAINNET,
-        )
-        return str(stake_address_obj)
-
-    raise InvalidMethod(method=method)
+    full_address_obj = Address.from_primitive(full_address)
+    stake_address_obj = Address(
+        staking_part=full_address_obj.staking_part,
+        network=PycardanoNetwork.TESTNET
+        if network in [CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]
+        else PycardanoNetwork.MAINNET,
+    )
+    return str(stake_address_obj)
 
 
 def get_stake_address_balance(
     stake_address,
-    network=CardanoNetwork.TESTNET,
+    network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
 ):
     """
@@ -1541,7 +1457,7 @@ def get_stake_address_balance(
             message="Invalid Stake Address Type.",
             type=type(stake_address),
         )
-    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.TESTNET]:
+    if network not in [CardanoNetwork.MAINNET, CardanoNetwork.PREPROD, CardanoNetwork.PREVIEW]:
         raise InvalidNetwork(network=network)
 
     if method in [

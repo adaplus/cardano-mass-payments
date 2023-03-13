@@ -8,6 +8,7 @@ import uuid
 from ..cache import CACHE_VALUES
 from ..classes import SourceAddressDetail, TransactionPlan
 from ..constants.common import (
+    MAGIC_NUMBER_MAP,
     CardanoNetwork,
     DustCollectionMethod,
     ScriptMethod,
@@ -226,8 +227,6 @@ def get_command_parameters(args):
     metadata_json_filename = args.metadata_json_file
 
     # Update Settings
-    if args.magic_number:
-        CACHE_VALUES["settings"].cardano_testnet_magic = args.magic_number
 
     transaction_plan = None
     if args.transaction_plan_file:
@@ -270,6 +269,13 @@ def get_command_parameters(args):
         )
     except ValueError:
         raise InvalidMethod(method=args.script_method)
+
+    if args.magic_number != -1:
+        CACHE_VALUES["settings"].cardano_testnet_magic = args.magic_number
+    else:
+        CACHE_VALUES["settings"].cardano_testnet_magic = MAGIC_NUMBER_MAP[args.cardano_network]
+
+    CACHE_VALUES["settings"].cardano_node_docker_image_name = args.cardano_node_docker_image
 
     if script_method == ScriptMethod.METHOD_PYCARDANO:
         if args.include_rewards:
@@ -577,7 +583,7 @@ def main():
     parser.add_argument(
         "--cardano-network",
         help="Network which the script will connect to",
-        default=CardanoNetwork.TESTNET.value,
+        default=CardanoNetwork.PREPROD.value,
         choices=[cn.value for cn in CardanoNetwork],
     )
     parser.add_argument(
@@ -647,7 +653,7 @@ def main():
         "--magic-number",
         help="Cardano Network Magic Number",
         type=int,
-        default=1000,
+        default=-1,
     )
     parser.add_argument(
         "--dust-collection-method",
@@ -660,6 +666,11 @@ def main():
         help="Amount that will serve as the criteria for dust collection",
         type=int,
         default=10000000,
+    )
+    parser.add_argument(
+        "--cardano-node-docker-image",
+        help="Docker Image name of the Cardano node",
+        default="cardano-node-docker-image-name",
     )
     parser.add_argument("--source-address", help="Source Address")
     parser.add_argument("--source-signing-key-file", help="Source Signing Key File")

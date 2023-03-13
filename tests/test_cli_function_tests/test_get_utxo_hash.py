@@ -87,7 +87,7 @@ class TestProcess(TestCase):
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses[("transaction", "txid")] = "test_txid"
         mock_pycardano_context = CardanoCLIChainContext(
-            cardano_network=CardanoNetwork.TESTNET,
+            cardano_network=CardanoNetwork.PREPROD,
             use_docker_cli=True,
         )
 

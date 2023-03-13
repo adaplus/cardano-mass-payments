@@ -3,7 +3,8 @@ import enum
 
 class CardanoNetwork(enum.Enum):
     MAINNET = "MAINNET"
-    TESTNET = "TESTNET"
+    PREPROD = "PREPROD"
+    PREVIEW = "PREVIEW"
 
 
 class ScriptMethod(enum.Enum):
@@ -36,3 +37,10 @@ class TransactionStatus(enum.Enum):
 class DustCollectionMethod(enum.Enum):
     COLLECT_TO_SOURCE = "COLLECT_TO_SOURCE"
     COLLECT_PER_ADDRESS = "COLLECT_PER_ADDRESS"
+
+
+MAGIC_NUMBER_MAP = {
+    "MAINNET": 764824073,
+    "PREPROD": 1,
+    "PREVIEW": 2,
+}

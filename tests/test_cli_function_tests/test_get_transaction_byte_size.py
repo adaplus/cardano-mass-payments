@@ -449,7 +449,7 @@ class TestProcess(TestCase):
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
                 "pycardano_context": CardanoCLIChainContext(
-                    cardano_network=CardanoNetwork.TESTNET,
+                    cardano_network=CardanoNetwork.PREPROD,
                     use_docker_cli=True,
                 ),
                 "source_address": MOCK_ADDRESS,
@@ -483,7 +483,7 @@ class TestProcess(TestCase):
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
                 "pycardano_context": CardanoCLIChainContext(
-                    cardano_network=CardanoNetwork.TESTNET,
+                    cardano_network=CardanoNetwork.PREPROD,
                     use_docker_cli=True,
                 ),
                 "source_address": MOCK_ADDRESS,
@@ -523,7 +523,7 @@ class TestProcess(TestCase):
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
                 "pycardano_context": CardanoCLIChainContext(
-                    cardano_network=CardanoNetwork.TESTNET,
+                    cardano_network=CardanoNetwork.PREPROD,
                     use_docker_cli=True,
                 ),
                 "source_address": MOCK_ADDRESS,
@@ -570,7 +570,7 @@ class TestProcess(TestCase):
             "cardano_mass_payments.cache.CACHE_VALUES",
             {
                 "pycardano_context": CardanoCLIChainContext(
-                    cardano_network=CardanoNetwork.TESTNET,
+                    cardano_network=CardanoNetwork.PREPROD,
                     use_docker_cli=True,
                 ),
                 "source_address": MOCK_ADDRESS,

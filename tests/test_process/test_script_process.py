@@ -26,7 +26,7 @@ from cardano_mass_payments.constants.exceptions import (
 )
 from tests.mock_responses import MOCK_TEST_RESPONSES, USE_SUBPROCESS_FUNCTION_FLAG
 from tests.mock_utils import (
-    MOCK_ADDRESS,
+    MOCK_FULL_ADDRESS,
     MOCK_METADATA_CONTENT,
     MOCK_PROTOCOL_PARAMETERS,
     MOCK_STAKE_ADDRESS,
@@ -40,7 +40,7 @@ from tests.mock_utils import (
 class TestProcess(TestCase):
     def create_test_source_csv(self):
         f = tempfile.NamedTemporaryFile(mode="w+", suffix=".csv")
-        line = f"{MOCK_ADDRESS},test.skey"
+        line = f"{MOCK_FULL_ADDRESS},test.skey"
         f.write(line.strip())
         f.seek(0)
         return f
@@ -49,7 +49,7 @@ class TestProcess(TestCase):
         self,
         sources_csv,
         payments_csv,
-        cardano_network=CardanoNetwork.TESTNET.value,
+        cardano_network=CardanoNetwork.PREPROD.value,
         script_method=ScriptMethod.METHOD_DOCKER_CLI.value,
         output_type=ScriptOutputFormats.JSON.value,
         add_comments=False,
@@ -65,6 +65,7 @@ class TestProcess(TestCase):
         transaction_plan_file=None,
         magic_number=1,
         include_rewards=False,
+        cardano_node_docker_image="cardano_node_docker_image_name",
     ):
         command_arguments = argparse.Namespace()
 
@@ -86,6 +87,7 @@ class TestProcess(TestCase):
         command_arguments.transaction_plan_file = transaction_plan_file
         command_arguments.magic_number = magic_number
         command_arguments.include_rewards = include_rewards
+        command_arguments.cardano_node_docker_image = cardano_node_docker_image
 
         return command_arguments
 
@@ -94,9 +96,9 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -131,9 +133,9 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -170,9 +172,9 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -213,7 +215,7 @@ class TestProcess(TestCase):
             mock_wallet_utxo[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 9806},
             }
 
@@ -221,7 +223,7 @@ class TestProcess(TestCase):
         mock_responses[
             (
                 "cat",
-                f"/tmp/utxo-{MOCK_ADDRESS}.json",
+                f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
         mock_responses["calculate-min-fee"] = "100 Lovelace"
@@ -261,7 +263,7 @@ class TestProcess(TestCase):
             mock_wallet_utxo[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 236114},
             }
 
@@ -269,7 +271,7 @@ class TestProcess(TestCase):
         mock_responses[
             (
                 "cat",
-                f"/tmp/utxo-{MOCK_ADDRESS}.json",
+                f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
         mock_responses["calculate-min-fee"] = "100 Lovelace"
@@ -309,7 +311,7 @@ class TestProcess(TestCase):
             mock_wallet_utxo[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 575254},
             }
 
@@ -317,7 +319,7 @@ class TestProcess(TestCase):
         mock_responses[
             (
                 "cat",
-                f"/tmp/utxo-{MOCK_ADDRESS}.json",
+                f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
         mock_responses[("query", "tip")] = {"slot": 1}
@@ -357,7 +359,7 @@ class TestProcess(TestCase):
             mock_wallet_utxo[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 100},
             }
 
@@ -365,7 +367,7 @@ class TestProcess(TestCase):
         mock_responses[
             (
                 "cat",
-                f"/tmp/utxo-{MOCK_ADDRESS}.json",
+                f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
             )
         ] = mock_wallet_utxo
         mock_responses[("query", "tip")] = {"slot": 1}
@@ -402,9 +404,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -438,9 +440,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -479,9 +481,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -521,9 +523,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -582,9 +584,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -620,9 +622,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -658,15 +660,17 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_responses[("query", "protocol-parameters")] = mock_parameters
         mock_wallet_utxos = {}
         for i in range(500):
             mock_wallet_utxos[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 700},
             }
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = mock_wallet_utxos
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = mock_wallet_utxos
 
         command_arguments = self.generate_command_arguments(
             sources_csv=source_file.name,
@@ -700,9 +704,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -738,9 +742,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -785,12 +789,15 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        del mock_responses["cat"]
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
+        mock_responses["cat"] = USE_SUBPROCESS_FUNCTION_FLAG
+        mock_responses["rm"] = {}
         mock_responses[("query", "tip")] = {"slot": 1}
         mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
         mock_responses[("cardano-address", "address")] = {
@@ -819,7 +826,10 @@ class TestProcess(TestCase):
             "cardano_mass_payments.utils.cli_utils.sign_tx_file",
             side_effect=mock_sign_tx_file_cli,
         ):
-            transaction_plan = generate_script_process(command_arguments)
+            try:
+                transaction_plan = generate_script_process(command_arguments)
+            except Exception as e:
+                transaction_plan = e
 
         assert isinstance(transaction_plan, TransactionPlan)
         assert os.path.exists(transaction_plan.filename)
@@ -835,9 +845,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -889,9 +899,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -942,9 +952,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1005,9 +1015,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1053,9 +1063,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1111,9 +1121,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1166,9 +1176,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1215,9 +1225,9 @@ class TestProcess(TestCase):
         source_file = self.create_test_source_csv()
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1265,9 +1275,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1319,9 +1329,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1372,9 +1382,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }
@@ -1417,10 +1427,10 @@ class TestProcess(TestCase):
             mock_input_details[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 2000000},
             }
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = mock_input_details
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = mock_input_details
         mock_responses[("query", "tip")] = {"slot": 1}
         mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
         mock_responses[("query", "protocol-parameters")] = mock_parameters
@@ -1463,11 +1473,11 @@ class TestProcess(TestCase):
             mock_input_details[
                 f"85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#{i}"
             ] = {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 2000000},
             }
         mock_responses[("query", "tip")] = {"slot": 1}
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = mock_input_details
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = mock_input_details
         mock_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
         mock_responses[("query", "protocol-parameters")] = mock_parameters
 
@@ -1504,9 +1514,9 @@ class TestProcess(TestCase):
 
         mock_responses = deepcopy(MOCK_TEST_RESPONSES)
         mock_responses["calculate-min-fee"] = "100 Lovelace"
-        mock_responses[("cat", f"/tmp/utxo-{MOCK_ADDRESS}.json")] = {
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
             "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
-                "address": MOCK_ADDRESS,
+                "address": MOCK_FULL_ADDRESS,
                 "value": {"lovelace": 1000000000},
             },
         }

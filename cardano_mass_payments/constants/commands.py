@@ -42,7 +42,7 @@ QUERY_WALLET_UTXO_NO_FILE = (
 QUERY_WALLET_UTXO = f"{QUERY_WALLET_UTXO_NO_FILE} --out-file {{utxo_filename}}"
 
 # File commands
-CHECK_TEMP_DIRECTORY = "{prefix}test ! -d '/tmp' && mkdir '/tmp'"
+CHECK_TEMP_DIRECTORY = "{prefix}test ! -d '/tmp-files' && mkdir '/tmp-files'"
 READ_FILE = "{prefix}cat {filename}"
 DELETE_FILE = "{prefix}rm {filename}"
 
@@ -226,17 +226,6 @@ do
 done
 echo "Group Transaction Submission Checking Done"
 """
-
-INSPECT_ADDRESS_COMMAND = "echo '{full_address}' | cardano-address address inspect"
-
-INSPECT_ADDRESS_DOCKER_COMMAND = f'{{prefix}}sh -c "{INSPECT_ADDRESS_COMMAND}"'
-
-
-STAKE_ADDRESS_CONVERT_COMMAND = "bech32 {stake_prefix} <<< {stake_hash}"
-
-STAKE_ADDRESS_FROM_STAKE_HASH_COMMAND = (
-    f'{{prefix}}sh -c "{STAKE_ADDRESS_CONVERT_COMMAND}"'
-)
 
 STAKE_REWARDS_COMMAND = (
     "{prefix}cardano-cli query stake-address-info --address {address} {network}"

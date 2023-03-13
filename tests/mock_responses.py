@@ -1,3 +1,5 @@
+from tests.mock_utils import MOCK_ADDRESS, MOCK_FULL_ADDRESS
+
 USE_SUBPROCESS_FUNCTION_FLAG = (
     None  # Will be used as flag for using the subprocess function
 )
@@ -6,11 +8,19 @@ MOCK_TEST_RESPONSES = {
     ("query", "utxo"): {},
     (
         "cat",
-        "/tmp/utxo-addr_test1vpv2u2aqrvp4qnsw93qck3xagvwlleqs29erxtz3322t8ls46s7ew.json",
+        f"/tmp-files/utxo-{MOCK_ADDRESS}.json",
     ): {},
     (
         "rm",
-        "/tmp/utxo-addr_test1vpv2u2aqrvp4qnsw93qck3xagvwlleqs29erxtz3322t8ls46s7ew.json",
+        f"/tmp-files/utxo-{MOCK_ADDRESS}.json",
+    ): {},
+    (
+        "cat",
+        f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
+    ): {},
+    (
+        "rm",
+        f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json",
     ): {},
     "build-raw": USE_SUBPROCESS_FUNCTION_FLAG,
     "calculate-min-fee": USE_SUBPROCESS_FUNCTION_FLAG,

@@ -35,16 +35,10 @@ The package can only be run on `python >= 3.7`.
 
 These are the minimum required versions of the required tools:
 
-*   `pycardano >= 0.4.1`
+*   `pycardano >= 0.7.0`
 
 Currently, all Script methods requires the following cardano tools:
-- Cardano Node: `>=1.33.0`
-- Cardano Address: `>=3.7.0`
-- Bech32: `>=1.1.2`
-
-For Docker Cardano Versions, Cardano Wallet Docker Image has both Cardano Address and Bech32 tools in it
-
-Supported Version: `>= v2022-01-18`
+- Cardano Node: `>=1.35.5`
 
 
 ### Installation
@@ -97,8 +91,8 @@ pip install cardano-mass-payments
 | `--metadata-json-file`        | JSON File containing the metadata template that will be included in the cardano transaction.                                                                                                                                                                                                                                                                                                      |
 | `--metadata-message-file`     | TXT File containing the message that will be added in the transaction metadata.                                                                                                                                                                                                                                                                                                                   |
 | `--transaction-plan-file`     | TXT Transaction Plan File which can be used to generate the script.                                                                                                                                                                                                                                                                                                                               |
-| `"--magic-number`             | Cardano Network Magic Number where the python script will connect to.                                                                                                                                                                                                                                                                                                                             |
-
+| `--magic-number`              | Cardano Network Magic Number where the python script will connect to.                                                                                                                                                                                                                                                                                                                             |
+| `--cardano-node-docker-image` | Docker Image name of the Cardano node.                                                                                                                                                                                                                                                                                                                                                            |
 
 
 #### Flag Details

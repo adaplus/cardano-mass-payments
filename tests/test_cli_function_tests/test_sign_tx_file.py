@@ -181,7 +181,7 @@ class TestProcess(TestCase):
 
     def test_success_pycardano(self):
         mock_pycardano_context = CardanoCLIChainContext(
-            cardano_network=CardanoNetwork.TESTNET,
+            cardano_network=CardanoNetwork.PREPROD,
             use_docker_cli=True,
         )
 

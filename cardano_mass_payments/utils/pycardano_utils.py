@@ -97,6 +97,8 @@ class CardanoCLIChainContext(ChainContext):
                 collateral_percent=protocol_details.get("collateralPercentage"),
                 max_collateral_inputs=protocol_details.get("maxCollateralInputs"),
                 coins_per_utxo_word=protocol_details.get("utxoCostPerWord"),
+                coins_per_utxo_byte=protocol_details.get("utxoCostPerByte"),
+                cost_models=protocol_details.get("costModels"),
             )
             self._protocol_param = param
         return self._protocol_param
