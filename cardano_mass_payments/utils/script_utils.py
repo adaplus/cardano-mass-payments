@@ -1206,6 +1206,13 @@ def generate_bash_script(
         )
 
         # Get Prep TX Fee
+        signing_file_commands_list = []
+
+        for address in input_address_set:
+            for address_sk_file in signing_key_file_details[address]:
+                signing_file_commands_list.append(
+                    f"--signing-key-file {address_sk_file}",
+                )
         protocol_filename = (
             "mainnet-protocol.json"
             if network == CardanoNetwork.MAINNET
@@ -1218,7 +1225,7 @@ def generate_bash_script(
             num_output=len(prep_output_utxos),
             network=network_flag,
             protocol_file=protocol_filename,
-            num_witness=num_witness,
+            num_witness=len(signing_file_commands_list),
         )
 
         # Create Raw Prep TX File
@@ -1259,13 +1266,6 @@ def generate_bash_script(
         raw_file = prep_raw_filename
         prep_tx_sign_commands = []
         prep_signed_filename = f"{tx_uuid}_prep.signed"
-        signing_file_commands_list = []
-
-        for address in input_address_set:
-            for address_sk_file in signing_key_file_details[address]:
-                signing_file_commands_list.append(
-                    f"--signing-key-file {address_sk_file}",
-                )
 
         prep_tx_sign_commands.append(
             TRANSACTION_SIGN.format(
