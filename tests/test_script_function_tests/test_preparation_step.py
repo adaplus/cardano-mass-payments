@@ -557,8 +557,8 @@ class TestProcess(TestCase):
         ]
 
         with patch.dict(
-            "cardano_mass_payments.cache.CACHE_VALUES",
-            {"source_signing_key_file": ["test.skey"]},
+                "cardano_mass_payments.cache.CACHE_VALUES",
+                {"source_signing_key_file": ["test.skey"]},
         ), patch(
             "cardano_mass_payments.utils.cli_utils.subprocess_popen",
             side_effect=generate_mock_popen_function(mock_responses),
@@ -576,3 +576,53 @@ class TestProcess(TestCase):
             payments_file.close()
 
         assert isinstance(result, dict)
+
+    def test_success_with_rewards_and_amount(self):
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_FULL_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses["sign"] = {}
+        mock_responses["rm"] = {}
+        mock_responses["cat"] = {}
+        mock_responses["build-raw"] = {}
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_protocol_parameters = deepcopy(MOCK_PROTOCOL_PARAMETERS)
+        mock_protocol_parameters["maxTxSize"] = 10000
+        mock_responses[("query", "protocol-parameters")] = mock_protocol_parameters
+        mock_responses[("cardano-address", "address")] = {
+            "stake_key_hash": "test_stake_key_hash",
+        }
+        mock_responses['"bech32'] = MOCK_STAKE_ADDRESS
+        mock_responses[("query", "stake-address-info")] = [
+            {
+                "rewardAccountBalance": 1000000,
+            },
+        ]
+
+        with patch.dict(
+            "cardano_mass_payments.cache.CACHE_VALUES",
+            {"source_signing_key_file": ["test.skey"]},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ):
+            payments_file = create_test_payment_csv(100)
+            try:
+                result = preparation_step(
+                    source_address=MOCK_FULL_ADDRESS,
+                    source_details={MOCK_FULL_ADDRESS: ["test.skey"]},
+                    payments_utxo_file=payments_file.name,
+                    include_rewards=True,
+                    reward_amount=10,
+                )
+            except Exception as e:
+                result = e
+            payments_file.close()
+
+        assert isinstance(result, dict)
+        assert result.get("stake_reward_details", {}).get("stake_amount") == 10

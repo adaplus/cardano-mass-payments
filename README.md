@@ -93,7 +93,7 @@ pip install cardano-mass-payments
 | `--transaction-plan-file`     | TXT Transaction Plan File which can be used to generate the script.                                                                                                                                                                                                                                                                                                                               |
 | `--magic-number`              | Cardano Network Magic Number where the python script will connect to.                                                                                                                                                                                                                                                                                                                             |
 | `--cardano-node-docker-image` | Docker Image name of the Cardano node.                                                                                                                                                                                                                                                                                                                                                            |
-
+| `--reward-withdrawal-amount`  | Amount of lovelace that will be withdrawn from the source's rewards                                                                                                                                                                                                                                                                                                                               |
 
 #### Flag Details
 

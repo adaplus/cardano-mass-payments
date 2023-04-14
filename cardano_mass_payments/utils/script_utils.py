@@ -192,6 +192,7 @@ def preparation_step(
     network=CardanoNetwork.PREPROD,
     method=ScriptMethod.METHOD_DOCKER_CLI,
     include_rewards=False,
+    reward_amount=-1,
 ):
     """
     Prepare and create an initial input utxo transaction
@@ -201,6 +202,7 @@ def preparation_step(
     :param network: Network where the function will get the cardano details
     :param method: Method that will be used for creating initial input transaction
     :param include_rewards: Flag on whether to include getting the stake rewards
+    :param reward_amount: Amount that will be withdrawn from rewards
     :return: initial groups + initial transaction details
     """
     if not isinstance(source_address, str):
@@ -222,6 +224,11 @@ def preparation_step(
         raise InvalidType(
             type=type(include_rewards),
             message="Invalid include rewards type.",
+        )
+    if not isinstance(reward_amount, int):
+        raise InvalidType(
+            type=type(reward_amount),
+            message="Invalid reward amount type.",
         )
 
     # Parse File
@@ -264,7 +271,7 @@ def preparation_step(
             network=network,
             method=method,
         )
-        stake_balance = get_stake_address_balance(
+        stake_balance = reward_amount if reward_amount > 0 else get_stake_address_balance(
             stake_address=stake_address,
             network=network,
             method=method,
@@ -1036,7 +1043,6 @@ def generate_bash_script(
     input_address_set = set()
     for input_utxo in prep_input_utxos:
         input_address_set.add(input_utxo.address)
-    num_witness = len(input_address_set)
 
     pycardano_context = CACHE_VALUES.get("pycardano_context")
 

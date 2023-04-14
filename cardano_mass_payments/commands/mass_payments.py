@@ -359,6 +359,7 @@ def get_command_parameters(args):
         "enable_dust_collection": args.enable_dust_collection,
         "enable_immediate_execution": args.execute_script_now,
         "include_rewards": args.include_rewards,
+        "reward_withdrawal_amount": args.reward_withdrawal_amount,
     }
 
 
@@ -374,6 +375,7 @@ def generate_transaction_plan(
     dust_collection_method=DustCollectionMethod.COLLECT_TO_SOURCE,
     dust_collection_threshold=10000000,
     include_rewards=False,
+    reward_amount=-1,
 ):
     """
     Generate Transaction Plan
@@ -389,6 +391,7 @@ def generate_transaction_plan(
     :param dust_collection_method: Method that will be used for dust collection
     :param dust_collection_threshold: Maximum amount that will be the basis for dust collection
     :param include_rewards: Flag on whether to include getting the stake rewards
+    :param reward_amount: Amount that will be withdrawn from rewards
     :return: TransactionPlan object
     """
     print_to_console("Creating Preparation TX and Initial Groupings...", output_format)
@@ -399,6 +402,7 @@ def generate_transaction_plan(
         network=cardano_network,
         method=script_method,
         include_rewards=include_rewards,
+        reward_amount=reward_amount,
     )
 
     if init_details.get("require_dust_collection"):
@@ -642,6 +646,12 @@ def main():
         nargs="?",
         default=False,
         const=True,
+    )
+    parser.add_argument(
+        "--reward-withdrawal-amount",
+        help="Amount that will be withdrawn from the rewards (if include reward flags is set)",
+        type=int,
+        default=-1,
     )
     parser.add_argument(
         "--allowed-ttl-slots",

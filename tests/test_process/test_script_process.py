@@ -65,6 +65,7 @@ class TestProcess(TestCase):
         transaction_plan_file=None,
         magic_number=1,
         include_rewards=False,
+        reward_withdrawal_amount=-1,
         cardano_node_docker_image="cardano_node_docker_image_name",
     ):
         command_arguments = argparse.Namespace()
@@ -87,6 +88,7 @@ class TestProcess(TestCase):
         command_arguments.transaction_plan_file = transaction_plan_file
         command_arguments.magic_number = magic_number
         command_arguments.include_rewards = include_rewards
+        command_arguments.reward_withdrawal_amount = reward_withdrawal_amount
         command_arguments.cardano_node_docker_image = cardano_node_docker_image
 
         return command_arguments
@@ -814,6 +816,63 @@ class TestProcess(TestCase):
             sources_csv=source_file.name,
             payments_csv=payment_file.name,
             include_rewards=True,
+        )
+
+        with patch.dict(
+                "cardano_mass_payments.cache.CACHE_VALUES",
+                {"metadata_file": None},
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.subprocess_popen",
+            side_effect=generate_mock_popen_function(mock_responses),
+        ), patch(
+            "cardano_mass_payments.utils.cli_utils.sign_tx_file",
+            side_effect=mock_sign_tx_file_cli,
+        ):
+            try:
+                transaction_plan = generate_script_process(command_arguments)
+            except Exception as e:
+                transaction_plan = e
+
+        assert isinstance(transaction_plan, TransactionPlan)
+        assert os.path.exists(transaction_plan.filename)
+
+        os.remove(transaction_plan.filename)
+        os.remove(f"{transaction_plan.uuid}.sh")
+        source_file.close()
+        payment_file.close()
+
+    def test_success_with_rewards_and_amount(self):
+        payment_file = create_test_payment_csv(30)
+        source_file = self.create_test_source_csv()
+
+        mock_responses = deepcopy(MOCK_TEST_RESPONSES)
+        mock_responses["calculate-min-fee"] = "100 Lovelace"
+        del mock_responses["cat"]
+        mock_responses[("cat", f"/tmp-files/utxo-{MOCK_FULL_ADDRESS}.json")] = {
+            "85d0364b65cd68e259cd93a33253e322a0d02a67338f85dc1b67b09791e35905#1": {
+                "address": MOCK_FULL_ADDRESS,
+                "value": {"lovelace": 1000000000},
+            },
+        }
+        mock_responses["cat"] = USE_SUBPROCESS_FUNCTION_FLAG
+        mock_responses["rm"] = {}
+        mock_responses[("query", "tip")] = {"slot": 1}
+        mock_responses[("query", "protocol-parameters")] = MOCK_PROTOCOL_PARAMETERS
+        mock_responses[("cardano-address", "address")] = {
+            "stake_key_hash": "test_stake_key_hash",
+        }
+        mock_responses['"bech32'] = MOCK_STAKE_ADDRESS
+        mock_responses[("query", "stake-address-info")] = [
+            {
+                "rewardAccountBalance": 1000000,
+            },
+        ]
+
+        command_arguments = self.generate_command_arguments(
+            sources_csv=source_file.name,
+            payments_csv=payment_file.name,
+            include_rewards=True,
+            reward_withdrawal_amount=1000000,
         )
 
         with patch.dict(
